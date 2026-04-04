@@ -24,6 +24,12 @@ class AkunCoaResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'CoA';
+    protected static ?string $pluralLabel = 'CoA';
+    protected static ?string $label = 'CoA';
+
+    protected static ?string $navigationGroup = 'Master Data';
+
     public static function form(Form $form): Form
     {
         return $form
