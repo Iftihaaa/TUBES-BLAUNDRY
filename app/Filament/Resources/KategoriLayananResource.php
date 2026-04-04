@@ -33,6 +33,12 @@ class KategoriLayananResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Kategori Layanan';
+    protected static ?string $pluralLabel = 'Kategori Layanan';
+    protected static ?string $label = 'Kategori Layanan';
+
+    protected static ?string $navigationGroup = 'Master Data';
+
     public static function form(Form $form): Form
     {
         return $form

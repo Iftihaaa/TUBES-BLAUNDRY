@@ -35,6 +35,12 @@ class LayananResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
+    protected static ?string $navigationLabel = 'Layanan';
+    protected static ?string $pluralLabel = 'Layanan';
+    protected static ?string $label = 'Layanan';
+
+    protected static ?string $navigationGroup = 'Master Data';
+
     public static function form(Form $form): Form
     {
         return $form
