@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\MemberResource\Pages;
 use App\Models\Member;
 use Filament\Forms\Form;
+use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Resources\Resource;
 
@@ -17,11 +18,13 @@ class MemberResource extends Resource
 {
     protected static ?string $model = Member::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Pelanggan';
     protected static ?string $modelLabel = 'Pelanggan';
     protected static ?string $pluralModelLabel = 'Pelanggan';
+
+    protected static ?string $navigationGroup = 'Master Data';
 
     // ================= FORM =================
     public static function form(Form $form): Form
@@ -54,7 +57,8 @@ class MemberResource extends Resource
         ->sortable(),
 
     TextColumn::make('nama_pelanggan')
-        ->label('Nama Pelanggan'),
+        ->label('Nama Pelanggan')
+        ->searchable(),
 
     TextColumn::make('no_telp')
         ->label('No Telp'),
@@ -63,11 +67,14 @@ class MemberResource extends Resource
         ->label('Alamat'),
 ])
             ->actions([
-                \Filament\Tables\Actions\EditAction::make(),
-                \Filament\Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

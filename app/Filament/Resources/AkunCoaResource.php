@@ -24,9 +24,9 @@ class AkunCoaResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
 
-    protected static ?string $navigationLabel = 'CoA';
-    protected static ?string $pluralLabel = 'CoA';
-    protected static ?string $label = 'CoA';
+    protected static ?string $navigationLabel = 'Chart of Account';
+    protected static ?string $pluralLabel = 'Chart of Account';
+    protected static ?string $label = 'Chart of Account';
 
     protected static ?string $navigationGroup = 'Master Data';
 
