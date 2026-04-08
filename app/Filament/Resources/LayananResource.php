@@ -45,6 +45,11 @@ class LayananResource extends Resource
     {
         return $form
             ->schema([
+                Select::make('id_kategori_layanan')
+                ->label('Kategori Layanan')
+                ->relationship('kategoriLayanan', 'nama_kategori')
+                ->required(),
+
                 TextInput::make('nama_layanan')
                 ->label('Nama Layanan')
                 ->required(),
@@ -73,6 +78,10 @@ class LayananResource extends Resource
     {
         return $table
             ->columns([
+                TextColumn::make('kategoriLayanan.nama_kategori')
+                ->label('Kategori Layanan')
+                ->sortable(),
+
                 TextColumn::make('nama_layanan')
                 ->label('Nama Layanan')
                 ->searchable(),

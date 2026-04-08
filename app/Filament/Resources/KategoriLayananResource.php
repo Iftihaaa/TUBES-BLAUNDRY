@@ -14,11 +14,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-use Filament\Forms\Components\RichEditor;
+// tambahan untuk komponen input form
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\FileUpload;
 
 // tambahan untuk komponen kolom
 use Filament\Tables\Columns\TextColumn;
@@ -62,8 +60,8 @@ class KategoriLayananResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('nama_kategori')
-                    ->label('Nama Kategori')
-                    ->sortable(),
+                    ->label('Nama Kategori'),
+                    
                 TextColumn::make('deskripsi')
                     ->label('Deskripsi')
                     ->limit(50),
