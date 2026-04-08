@@ -11,4 +11,9 @@ class KategoriLayanan extends Model
     protected $table = 'kategori_layanan'; // Nama tabel eksplisit
 
     protected $guarded = [];
+
+    public function layanans()
+    {
+        return $this->hasMany(Layanan::class, 'id_kategori_layanan', 'id');
+    }
 }
