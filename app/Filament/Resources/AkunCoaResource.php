@@ -59,6 +59,7 @@ class AkunCoaResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('header_akun', 'asc') 
             ->columns([
                  //isikan kolom mana saja yang akan ditampilkan di sini
                 TextColumn::make('header_akun'),
