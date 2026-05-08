@@ -34,11 +34,9 @@ class PegawaiResource extends Resource
                 Forms\Components\TextInput::make('jabatan')
                     ->required(),
 
-               Forms\Components\TextInput::make('no_telp')
-    ->label('No Telepon')
-    ->tel()
-    ->placeholder('Contoh: 08123456789')
-    ->maxLength(20),
+                Forms\Components\TextInput::make('no_telp')
+                    ->label('No Telepon')
+                    ->tel(),
 
                 Forms\Components\Textarea::make('alamat'),
             ]);

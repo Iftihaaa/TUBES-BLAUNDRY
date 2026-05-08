@@ -10,6 +10,8 @@ class KategoriLayanan extends Model
     use HasFactory;
     protected $table = 'kategori_layanan'; // Nama tabel eksplisit
 
+    protected $primaryKey = 'id_kategori_layanan'; // ← tambahkan ini
+
     protected $guarded = [];
 
     public function layanans()
@@ -17,3 +19,4 @@ class KategoriLayanan extends Model
         return $this->hasMany(Layanan::class, 'id_kategori_layanan', 'id');
     }
 }
+   
