@@ -47,14 +47,21 @@ class PegawaiResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->defaultSort('id_pegawai')
             ->columns([
-                Tables\Columns\TextColumn::make('id')
-                        ->label('ID Pegawai')
-                        ->sortable(),
-                Tables\Columns\TextColumn::make('nama')->searchable(),
+                Tables\Columns\TextColumn::make('id_pegawai')
+                    ->label('ID Pegawai')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('nama')
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('jabatan'),
+
                 Tables\Columns\TextColumn::make('no_telp'),
-                Tables\Columns\TextColumn::make('alamat')->limit(30),
+
+                Tables\Columns\TextColumn::make('alamat')
+                    ->limit(30),
             ])
             ->filters([
                 //

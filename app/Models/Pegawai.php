@@ -8,6 +8,8 @@ class Pegawai extends Model
 {
     protected $table = 'pegawais';
 
+    protected $primaryKey = 'id_pegawai';
+
     protected $fillable = [
         'nama',
         'jabatan',
@@ -15,8 +17,11 @@ class Pegawai extends Model
         'alamat',
     ];
 
+    public function absensi()
+    {
+        return $this->hasMany(Absensi::class, 'id_pegawai', 'id_pegawai');
     public function pembelians()
     {
-        return $this->hasMany(Pembelian::class, 'pegawai_id');
+        return $this->hasMany(Pembelian::class, 'id_pegawai');
     }
 }
