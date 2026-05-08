@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('coa', function (Blueprint $table) {
-            $table->id();
-            $table->integer('header_akun');
-            $table->string('kode_akun');
-            $table->string('nama_akun');
-            $table->timestamps();
+        Schema::table('pemesanan', function (Blueprint $table) {
+            $table->decimal('ongkir', 10, 2)->default(0)->after('total_harga');
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('coa');
+        Schema::table('pemesanan', function (Blueprint $table) {
+            $table->dropColumn('ongkir');
+        });
     }
 };
