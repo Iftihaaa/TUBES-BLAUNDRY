@@ -4,20 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\KategoriLayanan; // Tambah import untuk relationship
 
 class Layanan extends Model
 {
-   use HasFactory;
+    use HasFactory;
 
-    protected $table = 'layanan'; // nama tabel eksplisit
+    protected $table = 'layanan';
 
-    protected $primaryKey = 'id_layanan'; // karena pakai custom id
+    protected $primaryKey = 'id_layanan';
 
-    protected $guarded = [];
+    protected $fillable = [
+        'nama_layanan',
+        'harga_per_kg',
+        'deskripsi',
+        'gambar',
+        'is_admin',
+    ];
 
-    public function kategoriLayanan()
+    public function pemesanans()
     {
-        return $this->belongsTo(KategoriLayanan::class, 'id_kategori_layanan', 'id');
+        return $this->hasMany(Pemesanan::class, 'layanan_id', 'id_layanan');
     }
 }
