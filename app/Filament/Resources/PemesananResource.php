@@ -41,7 +41,7 @@ class PemesananResource extends Resource
 {
     protected static ?string $model = Pemesanan::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
     protected static ?string $navigationLabel = 'Pemesanan';
     protected static ?string $navigationGroup = 'Transaksi';
 
@@ -73,10 +73,36 @@ class PemesananResource extends Resource
 
                                     Select::make('id_pelanggan')
                                         ->label('Pelanggan')
-                                        ->options(Member::pluck('nama_pelanggan', 'id_pelanggan')->toArray())
+                                        ->options(fn () => Member::pluck('nama_pelanggan', 'id_pelanggan')->toArray())
                                         ->required()
                                         ->searchable()
-                                        ->placeholder('Pilih Pelanggan'),
+                                        ->placeholder('Pilih atau tambah pelanggan baru')
+                                        ->createOptionForm([
+                                            TextInput::make('nama_pelanggan')
+                                                ->label('Nama Pelanggan')
+                                                ->required()
+                                                ->maxLength(255),
+
+                                            TextInput::make('no_telp')
+                                                ->label('No. Telepon')
+                                                ->required()
+                                                ->tel()
+                                                ->maxLength(20),
+
+                                            Forms\Components\Textarea::make('alamat')
+                                                ->label('Alamat')
+                                                ->required()
+                                                ->rows(3),
+                                        ])
+                                        ->createOptionUsing(function (array $data): int {
+                                            $member = Member::create([
+                                                'nama_pelanggan' => $data['nama_pelanggan'],
+                                                'no_telp'        => $data['no_telp'],
+                                                'alamat'         => $data['alamat'],
+                                            ]);
+                                            return $member->id_pelanggan;
+                                        })
+                                        ->createOptionModalHeading('Tambah Pelanggan Baru'),
                                 ])
                                 ->columns(3),
 
@@ -92,7 +118,7 @@ class PemesananResource extends Resource
                                                 ->options(Layanan::pluck('nama_layanan', 'id_layanan')->toArray())
                                                 ->required()
                                                 ->searchable()
-                                                ->reactive()
+                                                ->live()
                                                 ->afterStateUpdated(function ($state, Set $set) {
                                                     $layanan = Layanan::with('kategoriLayanan')->find($state);
                                                     if (!$layanan) return;
@@ -113,10 +139,30 @@ class PemesananResource extends Resource
                                                 ->required()
                                                 ->default(1)
                                                 ->minValue(0.1)
-                                                ->reactive()
+                                                ->live(onBlur: true)
                                                 ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                                    $harga = (float) $get('harga_satuan');
-                                                    $set('subtotal', round($harga * (float) ($state ?? 1), 2));
+                                                    $harga    = (float) $get('harga_satuan');
+                                                    $jumlah   = (float) ($state ?? 1);
+                                                    $subtotal = round($harga * $jumlah, 2);
+                                                    $set('subtotal', $subtotal);
+
+                                                    // Hitung total semua item dari state,
+                                                    // tapi subtotal item ini pakai nilai baru (belum ke-commit)
+                                                    $items      = $get('../../items_layanan') ?? [];
+                                                    $currentKey = $get('../../items_layanan');
+                                                    $total      = collect($items)->sum(fn ($item) => (float) ($item['subtotal'] ?? 0));
+
+                                                    // Koreksi: subtotal di state item ini masih lama,
+                                                    // jadi kita kurangi lama + tambah baru
+                                                    $subtotalLama = (float) ($get('subtotal') ?? 0);
+                                                    $total        = $total - $subtotalLama + $subtotal;
+
+                                                    $set('../../total_harga', $total);
+                                                    // Recalc grand total juga
+                                                    $ongkir = in_array($get('../../pengantaran'), ['antar-jemput', 'antar saja'])
+                                                        ? (float) ($get('../../ongkir') ?? 0)
+                                                        : 0;
+                                                    $set('../../grand_total', $total + $ongkir);
                                                 })
                                                 ->columnSpan(2),
 
@@ -131,9 +177,10 @@ class PemesananResource extends Resource
                                         ])
                                         ->columns(7)
                                         ->addActionLabel('+ Tambah Layanan')
-                                        ->minItems(1)
-                                        ->reactive()
+                                        ->minItems(fn ($livewire) => $livewire instanceof \App\Filament\Resources\PemesananResource\Pages\CreatePemesanan ? 1 : 0)
+                                        ->live()
                                         ->afterStateUpdated(function (Get $get, Set $set) {
+                                            // Ini tetap ada untuk handle tambah/hapus item
                                             self::recalcTotal($get, $set);
                                         })
                                         ->deleteAction(
@@ -202,6 +249,12 @@ class PemesananResource extends Resource
                                         ->default(0)
                                         ->prefix('Rp')
                                         ->dehydrated(false)
+                                        ->afterStateHydrated(function ($state, Set $set, $record) {
+                                            // Saat Edit, isi dari total_harga record
+                                            if ($record && !$state) {
+                                                $set('grand_total', $record->total_harga);
+                                            }
+                                        })
                                         ->extraInputAttributes(['class' => 'font-bold']),
                                 ])
                                 ->columns(3),
@@ -237,7 +290,7 @@ class PemesananResource extends Resource
                                             ->modalDescription('Pastikan semua data sudah benar. Setelah diproses, pesanan akan tersimpan ke database.')
                                             ->modalSubmitActionLabel('Ya, Proses Sekarang')
                                             ->action(function (Get $get, Set $set) {
-                                                $items      = $get('items_layanan') ?? [];
+                                                $items      = array_values($get('items_layanan') ?? []);
                                                 $totalHarga = collect($items)->sum(fn ($i) => (float) ($i['subtotal'] ?? 0));
                                                 $ongkir     = in_array($get('pengantaran'), ['antar-jemput', 'antar saja'])
                                                     ? (float) ($get('ongkir') ?? 0)
@@ -425,7 +478,7 @@ class PemesananResource extends Resource
 
                         ]),
 
-                ])->columnSpan(3),
+                ])->columnSpan(3)->skippable(fn ($livewire) => !($livewire instanceof \App\Filament\Resources\PemesananResource\Pages\CreatePemesanan)),
 
                 // =====================
                 // Tombol Close
@@ -447,11 +500,32 @@ class PemesananResource extends Resource
 
     // =============================================
     // Helper: hitung ulang total_harga dari repeater
+    // $overrideSubtotal: nilai subtotal terbaru yang belum ke-commit ke state
     // =============================================
-    protected static function recalcTotal(Get $get, Set $set): void
+    protected static function recalcTotal(Get $get, Set $set, ?float $overrideSubtotal = null): void
     {
-        $items = $get('items_layanan') ?? [];
-        $total = collect($items)->sum(fn ($item) => (float) ($item['subtotal'] ?? 0));
+        $items = array_values($get('items_layanan') ?? []);
+
+        // Kalau ada override, ambil semua subtotal dari state kecuali item terakhir
+        // yang baru diupdate — ganti dengan override
+        if ($overrideSubtotal !== null) {
+            $allItems   = array_values($items);
+            $totalItems = count($allItems);
+            $total      = 0;
+
+            foreach ($allItems as $i => $item) {
+                if ($i === $totalItems - 1) {
+                    // Item terakhir yang baru diupdate, pakai override
+                    $total += $overrideSubtotal;
+                } else {
+                    $total += (float) ($item['subtotal'] ?? 0);
+                }
+            }
+        } else {
+            // Kalkulasi normal (tambah/hapus item, ganti layanan)
+            $total = collect($items)->sum(fn ($item) => (float) ($item['subtotal'] ?? 0));
+        }
+
         $set('total_harga', $total);
         self::recalcGrandTotal($get, $set, $total);
     }
@@ -541,7 +615,37 @@ class PemesananResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+
+                // Edit = hanya ubah status via modal kecil
+                Tables\Actions\Action::make('edit')
+                    ->label('Edit Status')
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('warning')
+                    ->form([
+                        Select::make('status')
+                            ->label('Status')
+                            ->options([
+                                'on process' => 'On Process',
+                                'done'       => 'Done',
+                            ])
+                            ->required()
+                            ->default(fn (Pemesanan $record): string => $record->status),
+                    ])
+                    ->fillForm(fn (Pemesanan $record): array => [
+                        'status' => $record->status,
+                    ])
+                    ->action(function (Pemesanan $record, array $data): void {
+                        $record->update(['status' => $data['status']]);
+
+                        Notification::make()
+                            ->title('Status diperbarui!')
+                            ->body('Pesanan ' . $record->kode_pemesanan . ' → ' . strtoupper($data['status']))
+                            ->success()
+                            ->send();
+                    })
+                    ->modalHeading('Ubah Status Pemesanan')
+                    ->modalSubmitActionLabel('Simpan'),
+
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

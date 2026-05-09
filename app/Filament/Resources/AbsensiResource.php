@@ -24,7 +24,7 @@ class AbsensiResource extends Resource
 
     protected static ?string $pluralLabel = 'Absensi';
 
-    protected static ?string $navigationGroup = 'Master Data';
+    protected static ?string $navigationGroup = 'Transaksi';
 
     public static function form(Form $form): Form
     {
