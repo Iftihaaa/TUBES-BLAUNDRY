@@ -18,8 +18,7 @@ class Pemesanan extends Model
     // Auto-generate kode pemesanan
     public static function getKodePemesanan()
     {
-        $sql = "SELECT IFNULL(MAX(id_pemesanan), 'PES-0000000') as id_pemesanan 
-                FROM pemesanan";
+        $sql = "SELECT IFNULL(MAX(id_pemesanan), 'PES-0000000') as id_pemesanan FROM pemesanan";
         $kode = DB::select($sql);
 
         foreach ($kode as $k) {
@@ -39,13 +38,7 @@ class Pemesanan extends Model
         return $this->belongsTo(Member::class, 'id_pelanggan', 'id_pelanggan');
     }
 
-    // Relasi ke tabel layanan
-    public function layanan()
-    {
-        return $this->belongsTo(Layanan::class, 'id_layanan', 'id_layanan');
-    }
-
-    // Relasi ke tabel pembayaran (1 pemesanan menghasilkan 1 pembayaran)
+    // Relasi ke tabel pembayaran (1 pemesanan → 1 pembayaran)
     public function pembayaran()
     {
         return $this->hasOne(Pembayaran::class, 'id_pemesanan', 'id_pemesanan');
@@ -57,15 +50,15 @@ class Pemesanan extends Model
         return $this->hasMany(DetailPemesanan::class, 'id_pemesanan', 'id_pemesanan');
     }
 
-    // Relasi M-M ke layanan (lewat detail_pemesanan)
+    // Relasi M-M ke layanan lewat detail_pemesanan
     public function layanans()
     {
         return $this->belongsToMany(
             Layanan::class,
-            'detail_pemesanan', // tabel pivot
-            'id_pemesanan',     // FK ke pemesanan
-            'id_layanan'        // FK ke layanan
+            'detail_pemesanan',
+            'id_pemesanan',
+            'id_layanan'
         )->withPivot('nama_layanan', 'harga_per_kg', 'berat_kg', 'subtotal')
-        ->withTimestamps();
+         ->withTimestamps();
     }
 }
