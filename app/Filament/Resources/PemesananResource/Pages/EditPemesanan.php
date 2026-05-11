@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\PemesananResource\Pages;
 
 use App\Filament\Resources\PemesananResource;
+use App\Models\Pemesanan;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Notifications\Notification;
 
 class EditPemesanan extends EditRecord
 {
@@ -13,25 +15,50 @@ class EditPemesanan extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\Action::make('save_status')
+                ->label('Save Changes')
+                ->icon('heroicon-o-check-circle')
+                ->color('warning')
+                ->requiresConfirmation()
+                ->modalHeading('Konfirmasi Simpan Perubahan')
+                ->modalDescription('Apakah Anda yakin ingin menyimpan perubahan status pesanan?')
+                ->modalSubmitActionLabel('Ya, Simpan')
+                ->action(function () {
+                    $record    = $this->getRecord();
+                    $newStatus = $this->data['status'] ?? $record->status;
+                    $oldStatus = $record->status;
+
+                    $record->update(['status' => $newStatus]);
+
+                    if ($oldStatus !== $newStatus) {
+                        Notification::make()
+                            ->title('Status berhasil diubah!')
+                            ->body("Pesanan {$record->kode_pemesanan}: '{$oldStatus}' → '{$newStatus}'")
+                            ->success()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->title('Tidak ada perubahan status.')
+                            ->info()
+                            ->send();
+                    }
+
+                    return redirect($this->getResource()::getUrl('index'));
+                }),
         ];
     }
 
-    // Load detail_pemesanan ke state items_layanan
+    // Hanya tampilkan tombol Cancel di bawah, Save changes sudah ada di header
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCancelFormAction(),
+        ];
+    }
+
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        $record = $this->getRecord();
-
-        $data['saved_id_pemesanan'] = $record->id_pemesanan;
-
-        $data['items_layanan'] = $record->detailPemesanan->map(fn ($detail) => [
-            'id_layanan'   => $detail->id_layanan,
-            'harga_satuan' => $detail->harga_per_kg,
-            'jumlah'       => $detail->berat_kg,
-            'subtotal'     => $detail->subtotal,
-            'is_satuan'    => optional($detail->layanan->kategoriLayanan)->nama_kategori === 'Satuan' ? '1' : '0',
-        ])->toArray();
-
+        $data['status'] = $this->getRecord()->status ?? 'on process';
         return $data;
     }
 }
