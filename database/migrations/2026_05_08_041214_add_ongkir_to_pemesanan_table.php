@@ -6,23 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('pemesanan', function (Blueprint $table) {
-            $table->decimal('ongkir', 10, 2)->default(0)->after('total_harga');
+            if (!Schema::hasColumn('pemesanan', 'ongkir')) {
+                $table->decimal('ongkir', 10, 2)
+                    ->default(0)
+                    ->after('total_harga');
+            }
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('pemesanan', function (Blueprint $table) {
-            $table->dropColumn('ongkir');
+            if (Schema::hasColumn('pemesanan', 'ongkir')) {
+                $table->dropColumn('ongkir');
+            }
         });
     }
 };
