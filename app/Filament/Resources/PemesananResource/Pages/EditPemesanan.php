@@ -45,15 +45,19 @@ class EditPemesanan extends EditRecord
 
                     return redirect($this->getResource()::getUrl('index'));
                 }),
+
+            Actions\Action::make('cancel')
+                ->label('Close')
+                ->color('gray')
+                ->icon('heroicon-o-x-circle')
+                ->url($this->getResource()::getUrl('index')),
         ];
     }
 
-    // Hanya tampilkan tombol Cancel di bawah, Save changes sudah ada di header
-    protected function getFormActions(): array
+    // Kosongkan footer — semua action sudah di header
+    public function getFormActions(): array
     {
-        return [
-            $this->getCancelFormAction(),
-        ];
+        return [];
     }
 
     protected function mutateFormDataBeforeFill(array $data): array

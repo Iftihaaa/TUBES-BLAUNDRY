@@ -13,4 +13,9 @@ class Pembayaran extends Model
 
     // proteksi kolom tabel (tidak ada yg diproteksi)
     protected $guarded = [];
+
+    public function pemesanan()
+    {
+        return $this->belongsTo(Pemesanan::class, 'id_pemesanan', 'id_pemesanan');
+    }
 }
