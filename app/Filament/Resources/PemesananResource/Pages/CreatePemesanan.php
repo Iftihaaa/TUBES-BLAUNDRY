@@ -26,7 +26,7 @@ class CreatePemesanan extends CreateRecord
     {
         return [
             $this->getCancelFormAction()
-                ->label('Batal')
+                ->label('Close')
                 ->color('gray'),
         ];
     }
