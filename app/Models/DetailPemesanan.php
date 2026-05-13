@@ -9,8 +9,9 @@ class DetailPemesanan extends Model
 {
     use HasFactory;
 
-    protected $table = 'detail_pemesanan';
-    protected $guarded = [];
+    protected $table      = 'detail_pemesanan';
+    protected $primaryKey = 'id_detail_pemesanan'; // ← ini yang kurang
+    protected $guarded    = [];
 
     // Otomatis hitung subtotal sebelum disimpan
     protected static function booted()

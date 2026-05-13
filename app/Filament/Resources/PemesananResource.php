@@ -4,65 +4,63 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PemesananResource\Pages;
 use App\Models\Pemesanan;
+use App\Models\DetailPemesanan;
+use App\Models\Pembayaran;
+use App\Models\Member;
+use App\Models\Layanan;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-
-// Komponen Form
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
-use Filament\Forms\Components\Hidden;
-
-// Komponen Table
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-
-// Model
-use App\Models\Member;
-use App\Models\Layanan;
-use App\Models\Pembayaran;
-use App\Models\DetailPemesanan;
-
-// Notifikasi
-use Filament\Notifications\Notification;
-
-// Lainnya
-use Illuminate\Support\Facades\DB;
+use Filament\Tables\Actions\Action;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PemesananResource extends Resource
 {
     protected static ?string $model = Pemesanan::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
+    protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
+
     protected static ?string $navigationLabel = 'Pemesanan';
+
     protected static ?string $navigationGroup = 'Transaksi';
 
+    // =========================================================================
+    // FORM
+    // =========================================================================
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
                 Wizard::make([
 
-                    // =====================
-                    // STEP 1: Data Pesanan
-                    // =====================
+                    // =========================================================
+                    // STEP 1 — PESANAN
+                    // =========================================================
                     Wizard\Step::make('Pesanan')
-                        ->icon('heroicon-o-shopping-cart')
+                        ->icon('heroicon-o-clipboard-document-list')
                         ->schema([
-                            Forms\Components\Section::make('Informasi Pemesanan')
+
+                            Section::make('Informasi Pesanan')
                                 ->icon('heroicon-m-document-text')
+                                ->collapsible()
                                 ->schema([
                                     TextInput::make('kode_pemesanan')
+                                        ->label('Kode Pesanan')
                                         ->default(fn () => Pemesanan::getKodePemesanan())
-                                        ->label('Kode Pemesanan')
                                         ->required()
                                         ->readonly(),
 
@@ -73,509 +71,361 @@ class PemesananResource extends Resource
 
                                     Select::make('id_pelanggan')
                                         ->label('Pelanggan')
-                                        ->options(fn () => Member::pluck('nama_pelanggan', 'id_pelanggan')->toArray())
-                                        ->required()
+                                        ->options(
+                                            Member::query()
+                                                ->pluck('nama_pelanggan', 'id_pelanggan')
+                                                ->toArray()
+                                        )
                                         ->searchable()
+                                        ->preload()
+                                        ->required()
                                         ->placeholder('Pilih atau tambah pelanggan baru')
                                         ->createOptionForm([
                                             TextInput::make('nama_pelanggan')
                                                 ->label('Nama Pelanggan')
                                                 ->required()
                                                 ->maxLength(255),
-
                                             TextInput::make('no_telp')
                                                 ->label('No. Telepon')
                                                 ->required()
                                                 ->tel()
                                                 ->maxLength(20),
-
                                             Forms\Components\Textarea::make('alamat')
                                                 ->label('Alamat')
                                                 ->required()
                                                 ->rows(3),
                                         ])
                                         ->createOptionUsing(function (array $data): int {
-                                            $member = Member::create([
-                                                'nama_pelanggan' => $data['nama_pelanggan'],
-                                                'no_telp'        => $data['no_telp'],
-                                                'alamat'         => $data['alamat'],
-                                            ]);
-                                            return $member->id_pelanggan;
-                                        })
-                                        ->createOptionModalHeading('Tambah Pelanggan Baru'),
+                                            return Member::create($data)->id_pelanggan;
+                                        }),
+
+                                    // Hidden — diisi via recalcTotal
+                                    Hidden::make('total_harga')->default(0),
+                                    Hidden::make('status')->default('on process'),
                                 ])
                                 ->columns(3),
 
-                            Forms\Components\Section::make('Daftar Layanan')
+                            // -------------------------------------------------
+                            // Daftar Layanan — Repeater
+                            // -------------------------------------------------
+                            Section::make('Daftar Layanan')
                                 ->icon('heroicon-m-list-bullet')
                                 ->description('Tambahkan satu atau lebih layanan untuk pesanan ini.')
                                 ->schema([
-                                    Repeater::make('items_layanan')
+                                    Repeater::make('detailPemesanan')
+                                        ->relationship('detailPemesanan')
                                         ->label('')
                                         ->schema([
                                             Select::make('id_layanan')
                                                 ->label('Layanan')
-                                                ->options(Layanan::pluck('nama_layanan', 'id_layanan')->toArray())
+                                                ->options(
+                                                    Layanan::with('kategoriLayanan')
+                                                        ->get()
+                                                        ->mapWithKeys(fn ($l) => [
+                                                            $l->id_layanan => $l->nama_layanan
+                                                                . ' ('
+                                                                . ($l->kategoriLayanan?->nama_kategori ?? '-')
+                                                                . ')',
+                                                        ])
+                                                        ->toArray()
+                                                )
                                                 ->required()
+                                                ->reactive()
                                                 ->searchable()
-                                                ->live()
+                                                ->disableOptionsWhenSelectedInSiblingRepeaterItems()
+                                                ->placeholder('Pilih Layanan')
+                                                ->columnSpan(2)
                                                 ->afterStateUpdated(function ($state, Set $set) {
                                                     $layanan = Layanan::with('kategoriLayanan')->find($state);
-                                                    if (!$layanan) return;
-                                                    $isSatuan = $layanan->kategoriLayanan?->nama_kategori === 'Satuan';
-                                                    $set('harga_satuan', $layanan->harga_per_kg);
-                                                    $set('is_satuan', $isSatuan ? '1' : '0');
-                                                    $set('jumlah', 1);
-                                                    $set('subtotal', $layanan->harga_per_kg);
-                                                })
-                                                ->columnSpan(3),
+                                                    $set('nama_layanan',  $layanan?->nama_layanan ?? '');
+                                                    $set('harga_per_kg',  $layanan?->harga_per_kg ?? 0);
+                                                    $set('nama_kategori', $layanan?->kategoriLayanan?->nama_kategori ?? 'Kiloan');
+                                                    $set('berat_kg', 1);
+                                                    $set('subtotal', (int) ($layanan?->harga_per_kg ?? 0));
+                                                }),
 
-                                            Hidden::make('is_satuan')->default('0'),
-                                            Hidden::make('harga_satuan')->default(0),
+                                            Hidden::make('nama_layanan'),
+                                            Hidden::make('nama_kategori'),
+                                            Hidden::make('harga_per_kg')->dehydrated(),
 
-                                            TextInput::make('jumlah')
-                                                ->label(fn (Get $get): string => $get('is_satuan') === '1' ? 'Jumlah (pcs)' : 'Berat (kg)')
+                                            // Jumlah / Berat
+                                            TextInput::make('berat_kg')
+                                                ->label(fn (Get $get): string =>
+                                                    $get('nama_kategori') === 'Satuan'
+                                                        ? 'Jumlah (pcs)'
+                                                        : 'Berat (kg)'
+                                                )
                                                 ->numeric()
-                                                ->required()
                                                 ->default(1)
+                                                ->required()
                                                 ->minValue(0.1)
-                                                ->live(onBlur: true)
+                                                ->step(fn (Get $get): string =>
+                                                    $get('nama_kategori') === 'Satuan' ? '1' : '0.1'
+                                                )
+                                                ->reactive()
+                                                ->live()
                                                 ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                                    $harga    = (float) $get('harga_satuan');
-                                                    $jumlah   = (float) ($state ?? 1);
-                                                    $subtotal = round($harga * $jumlah, 2);
-                                                    $set('subtotal', $subtotal);
+                                                    $harga = (float) ($get('harga_per_kg') ?? 0);
+                                                    $jml   = (float) ($state ?? 0);
+                                                    $set('subtotal', (int) ($harga * $jml));
+                                                }),
 
-                                                    // Hitung total semua item dari state,
-                                                    // tapi subtotal item ini pakai nilai baru (belum ke-commit)
-                                                    $items      = $get('../../items_layanan') ?? [];
-                                                    $currentKey = $get('../../items_layanan');
-                                                    $total      = collect($items)->sum(fn ($item) => (float) ($item['subtotal'] ?? 0));
-
-                                                    // Koreksi: subtotal di state item ini masih lama,
-                                                    // jadi kita kurangi lama + tambah baru
-                                                    $subtotalLama = (float) ($get('subtotal') ?? 0);
-                                                    $total        = $total - $subtotalLama + $subtotal;
-
-                                                    $set('../../total_harga', $total);
-                                                    // Recalc grand total juga
-                                                    $ongkir = in_array($get('../../pengantaran'), ['antar-jemput', 'antar saja'])
-                                                        ? (float) ($get('../../ongkir') ?? 0)
-                                                        : 0;
-                                                    $set('../../grand_total', $total + $ongkir);
-                                                })
-                                                ->columnSpan(2),
-
-                                            TextInput::make('subtotal')
+                                            Placeholder::make('subtotal_display')
                                                 ->label('Subtotal')
-                                                ->numeric()
-                                                ->readonly()
-                                                ->default(0)
-                                                ->prefix('Rp')
-                                                ->dehydrated()
-                                                ->columnSpan(2),
+                                                ->content(fn (Get $get): string =>
+                                                    'Rp ' . number_format(
+                                                        (int) ($get('subtotal') ?? 0),
+                                                        0, ',', '.'
+                                                    )
+                                                ),
+
+                                            Hidden::make('subtotal')->dehydrated(),
                                         ])
-                                        ->columns(7)
+                                        ->columns(['md' => 4])
                                         ->addActionLabel('+ Tambah Layanan')
-                                        ->minItems(fn ($livewire) => $livewire instanceof \App\Filament\Resources\PemesananResource\Pages\CreatePemesanan ? 1 : 0)
+                                        ->minItems(1)
+                                        ->required()
                                         ->live()
                                         ->afterStateUpdated(function (Get $get, Set $set) {
-                                            // Ini tetap ada untuk handle tambah/hapus item
                                             self::recalcTotal($get, $set);
-                                        })
-                                        ->deleteAction(
-                                            fn ($action) => $action->after(function (Get $get, Set $set) {
-                                                self::recalcTotal($get, $set);
-                                            })
-                                        ),
+                                        }),
                                 ]),
 
-                            Forms\Components\Section::make()
-                                ->schema([
-                                    TextInput::make('total_harga')
-                                        ->label('Total Harga Layanan')
-                                        ->numeric()
-                                        ->readonly()
-                                        ->default(0)
-                                        ->prefix('Rp')
-                                        ->dehydrated()
-                                        ->extraInputAttributes(['class' => 'font-bold text-lg']),
-                                ])
-                                ->columns(1),
-                        ]),
-
-                    // =====================
-                    // STEP 2: Pengantaran
-                    // =====================
-                    Wizard\Step::make('Pengantaran')
-                        ->icon('heroicon-o-truck')
-                        ->schema([
-                            Forms\Components\Section::make('Detail Pengantaran')
+                            // -------------------------------------------------
+                            // Detail Pengantaran + Grand Total
+                            // -------------------------------------------------
+                            Section::make('Detail Pengantaran')
                                 ->icon('heroicon-m-truck')
                                 ->schema([
                                     Select::make('pengantaran')
                                         ->label('Jenis Pengantaran')
                                         ->options([
-                                            'antar-jemput'  => 'Antar-Jemput',
+                                            'antar-jemput'  => 'Antar Jemput',
                                             'antar saja'    => 'Antar Saja',
                                             'ambil sendiri' => 'Ambil Sendiri',
                                         ])
                                         ->default('ambil sendiri')
                                         ->required()
+                                        ->reactive()
                                         ->live()
                                         ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                            if (!in_array($state, ['antar-jemput', 'antar saja'])) {
+                                            if ($state === 'ambil sendiri') {
                                                 $set('ongkir', 0);
                                             }
-                                            self::recalcGrandTotal($get, $set);
+                                            self::recalcTotal($get, $set);
                                         }),
 
                                     TextInput::make('ongkir')
-                                        ->label('Ongkos Kirim')
+                                        ->label('Ongkos Kirim (Rp)')
                                         ->numeric()
                                         ->default(0)
                                         ->prefix('Rp')
-                                        ->visible(fn (Get $get): bool => in_array($get('pengantaran'), ['antar-jemput', 'antar saja']))
                                         ->live()
-                                        ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                            self::recalcGrandTotal($get, $set);
-                                        })
-                                        ->dehydrated(),
+                                        ->minValue(0)
+                                        ->hidden(fn (Get $get) =>
+                                            $get('pengantaran') === 'ambil sendiri'
+                                            || blank($get('pengantaran'))
+                                        )
+                                        ->afterStateUpdated(function (Get $get, Set $set) {
+                                            self::recalcTotal($get, $set);
+                                        }),
 
-                                    TextInput::make('grand_total')
+                                    // Grand Total — Placeholder agar selalu reactive
+                                    Placeholder::make('grand_total_display')
                                         ->label('Grand Total (Layanan + Ongkir)')
-                                        ->numeric()
-                                        ->readonly()
-                                        ->default(0)
-                                        ->prefix('Rp')
-                                        ->dehydrated(false)
-                                        ->afterStateHydrated(function ($state, Set $set, $record) {
-                                            // Saat Edit, isi dari total_harga record
-                                            if ($record && !$state) {
-                                                $set('grand_total', $record->total_harga);
-                                            }
-                                        })
-                                        ->extraInputAttributes(['class' => 'font-bold']),
+                                        ->content(function (Get $get): string {
+                                            $items   = $get('detailPemesanan') ?? [];
+                                            $layanan = collect($items)->sum(fn ($i) => (int) ($i['subtotal'] ?? 0));
+                                            $isAmbil = $get('pengantaran') === 'ambil sendiri';
+                                            $ongkir  = $isAmbil ? 0 : (float) ($get('ongkir') ?? 0);
+                                            return 'Rp ' . number_format($layanan + $ongkir, 0, ',', '.');
+                                        }),
                                 ])
                                 ->columns(3),
+
+                            Forms\Components\Actions::make([
+                                Forms\Components\Actions\Action::make('simpan_sementara')
+                                    ->label('Proses Pesanan')
+                                    ->color('primary')
+                                    ->icon('heroicon-o-check-circle')
+                                    ->action(function (Get $get) {
+                                        self::simpanPemesanan($get);
+                                    }),
+                            ]),
                         ]),
 
-                    // =====================
-                    // STEP 3: Proses
-                    // =====================
+                    // =========================================================
+                    // STEP 2 — PROSES
+                    // =========================================================
                     Wizard\Step::make('Proses')
-                        ->icon('heroicon-o-cog-6-tooth')
+                        ->icon('heroicon-o-arrow-path')
                         ->schema([
-                            Forms\Components\Section::make('Konfirmasi & Proses Pemesanan')
-                                ->icon('heroicon-m-clipboard-document-check')
+                            Section::make('Status Pesanan')
+                                ->icon('heroicon-m-tag')
                                 ->schema([
                                     Select::make('status')
-                                        ->label('Status Awal')
+                                        ->label('Status Pesanan')
                                         ->options([
                                             'on process' => 'On Process',
                                             'done'       => 'Done',
                                         ])
                                         ->default('on process')
-                                        ->required(),
+                                        ->required()
+                                        ->native(false),
 
-                                    Hidden::make('saved_id_pemesanan'),
-
-                                    Forms\Components\Actions::make([
-                                        Forms\Components\Actions\Action::make('proses_pemesanan')
-                                            ->label('Proses Pemesanan')
-                                            ->color('primary')
-                                            ->icon('heroicon-o-bolt')
-                                            ->requiresConfirmation()
-                                            ->modalHeading('Konfirmasi Proses Pemesanan')
-                                            ->modalDescription('Pastikan semua data sudah benar. Setelah diproses, pesanan akan tersimpan ke database.')
-                                            ->modalSubmitActionLabel('Ya, Proses Sekarang')
-                                            ->action(function (Get $get, Set $set) {
-                                                $items      = array_values($get('items_layanan') ?? []);
-                                                $totalHarga = collect($items)->sum(fn ($i) => (float) ($i['subtotal'] ?? 0));
-                                                $ongkir     = in_array($get('pengantaran'), ['antar-jemput', 'antar saja'])
-                                                    ? (float) ($get('ongkir') ?? 0)
-                                                    : 0;
-                                                $grandTotal = $totalHarga + $ongkir;
-
-                                                // Ambil item pertama untuk kolom legacy di tabel pemesanan
-                                                $firstItem = $items[0] ?? [];
-
-                                                $pemesanan = Pemesanan::create([
-                                                    'kode_pemesanan' => $get('kode_pemesanan'),
-                                                    'id_pelanggan'   => $get('id_pelanggan'),
-                                                    'id_layanan'     => $firstItem['id_layanan'] ?? null,
-                                                    'tgl_pesan'      => $get('tgl_pesan'),
-                                                    'berat_kg'       => $firstItem['jumlah'] ?? 1,
-                                                    'total_harga'    => $grandTotal,
-                                                    'pengantaran'    => $get('pengantaran'),
-                                                    'ongkir'         => $ongkir,
-                                                    'status'         => $get('status'),
-                                                ]);
-
-                                                // Simpan semua detail layanan ke detail_pemesanan
-                                                foreach ($items as $item) {
-                                                    $layanan = Layanan::find($item['id_layanan'] ?? null);
-                                                    if (!$layanan) continue;
-
-                                                    DetailPemesanan::create([
-                                                        'id_pemesanan' => $pemesanan->id_pemesanan,
-                                                        'id_layanan'   => $layanan->id_layanan,
-                                                        'nama_layanan' => $layanan->nama_layanan,
-                                                        'harga_per_kg' => $layanan->harga_per_kg,
-                                                        'berat_kg'     => (float) ($item['jumlah'] ?? 1),
-                                                        'subtotal'     => (float) ($item['subtotal'] ?? 0),
-                                                    ]);
-                                                }
-
-                                                $set('saved_id_pemesanan', $pemesanan->id_pemesanan);
-
-                                                Notification::make()
-                                                    ->title('Pemesanan Berhasil Diproses!')
-                                                    ->body('Pesanan ' . $get('kode_pemesanan') . ' telah disimpan. Silakan lanjut ke tahap Pembayaran.')
-                                                    ->success()
-                                                    ->icon('heroicon-o-check-circle')
-                                                    ->duration(6000)
-                                                    ->send();
-                                            }),
-                                    ]),
-                                ]),
+                                    Placeholder::make('info_proses')
+                                        ->label('')
+                                        ->content('Ubah status pesanan sesuai kondisi laundry saat ini. Setelah selesai diproses, ubah ke "Done" sebelum melanjutkan ke pembayaran.'),
+                                ])
+                                ->columns(2),
                         ]),
 
-                    // =====================
-                    // STEP 4: Pembayaran
-                    // =====================
+                    // =========================================================
+                    // STEP 3 — PEMBAYARAN
+                    // =========================================================
                     Wizard\Step::make('Pembayaran')
                         ->icon('heroicon-o-banknotes')
                         ->schema([
+                            Section::make('Detail Pembayaran')
+                                ->icon('heroicon-m-credit-card')
+                                ->schema([
+                                    Placeholder::make('total_tagihan_display')
+                                        ->label('Total Tagihan')
+                                        ->content(function (Get $get): string {
+                                            $kode    = $get('kode_pemesanan');
+                                            $pesan   = Pemesanan::where('kode_pemesanan', $kode)->first();
+                                            $nominal = $pesan ? (float) $pesan->total_harga : 0;
+                                            return 'Rp ' . number_format($nominal, 0, ',', '.');
+                                        }),
 
-                            // Blade: ringkasan pesanan + tabel detail layanan
-                            Placeholder::make('ringkasan_pesanan')
-                                ->label('')
-                                ->content(fn (Get $get) => view('filament.components.pemesanan-ringkasan', [
-                                    'pemesanan' => Pemesanan::with([
-                                        'member',
-                                        'detailPemesanan.layanan.kategoriLayanan',
-                                    ])->find($get('saved_id_pemesanan')),
-                                ])),
+                                    Select::make('jenis_pembayaran')
+                                        ->label('Metode Pembayaran')
+                                        ->options([
+                                            'tunai'    => 'Tunai',
+                                            'midtrans' => 'Pembayaran Lain (Midtrans)',
+                                        ])
+                                        ->required()
+                                        ->reactive()
+                                        ->live()
+                                        ->native(false)
+                                        ->placeholder('Pilih Metode')
+                                        ->dehydrated(false),
 
-                            // Garis pemisah
-                            Placeholder::make('divider')
-                                ->label('')
-                                ->content(fn () => new \Illuminate\Support\HtmlString(
-                                    '<hr class="border-gray-200 my-1">'
-                                )),
+                                    TextInput::make('nominal_bayar')
+                                        ->label('Nominal Uang Diterima (Rp)')
+                                        ->numeric()
+                                        ->prefix('Rp')
+                                        ->required()
+                                        ->live()
+                                        ->minValue(0)
+                                        ->dehydrated(false)
+                                        ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'tunai')
+                                        ->afterStateUpdated(function ($state, Get $get, Set $set) {
+                                            $kode      = $get('kode_pemesanan');
+                                            $pesan     = Pemesanan::where('kode_pemesanan', $kode)->first();
+                                            $tagihan   = $pesan ? (float) $pesan->total_harga : 0;
+                                            $set('kembalian', max(0, (float) $state - $tagihan));
+                                        }),
 
-                            // Metode pembayaran
-                            Select::make('metode_pembayaran')
-                                ->label('Metode Pembayaran')
-                                ->options([
-                                    'tunai' => '💵 Tunai',
-                                    'qris'  => '📱 QRIS (Coming Soon)',
+                                    Placeholder::make('kembalian')
+                                        ->label('Kembalian')
+                                        ->content(function (Get $get): string {
+                                            $kode      = $get('kode_pemesanan');
+                                            $pesan     = Pemesanan::where('kode_pemesanan', $kode)->first();
+                                            $tagihan   = $pesan ? (float) $pesan->total_harga : 0;
+                                            $nominal   = (float) ($get('nominal_bayar') ?? 0);
+                                            return 'Rp ' . number_format(max(0, $nominal - $tagihan), 0, ',', '.');
+                                        })
+                                        ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'tunai'),
+
+                                    Placeholder::make('info_midtrans')
+                                        ->label('')
+                                        ->content('Integrasi Midtrans akan tersedia segera. Simpan pesanan terlebih dahulu.')
+                                        ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'midtrans'),
                                 ])
-                                ->default('tunai')
-                                ->required()
-                                ->live()
-                                ->disableOptionWhen(fn (string $value): bool => $value === 'qris'),
+                                ->columns(2),
 
-                            // Input nominal — hanya muncul kalau tunai
-                            TextInput::make('nominal_bayar')
-                                ->label('Nominal Dibayar')
-                                ->numeric()
-                                ->default(0)
-                                ->prefix('Rp')
-                                ->live()
-                                ->visible(fn (Get $get): bool => $get('metode_pembayaran') === 'tunai')
-                                ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                    $pemesanan  = Pemesanan::find($get('saved_id_pemesanan'));
-                                    $grandTotal = $pemesanan ? (float) $pemesanan->total_harga : 0;
-                                    $nominal    = (float) ($state ?? 0);
-                                    $kembalian  = $nominal >= $grandTotal ? $nominal - $grandTotal : 0;
-                                    $set('kembalian', $kembalian);
-                                })
-                                ->required(fn (Get $get): bool => $get('metode_pembayaran') === 'tunai'),
-
-                            // Kembalian — readonly, auto-hitung
-                            TextInput::make('kembalian')
-                                ->label('Kembalian')
-                                ->numeric()
-                                ->default(0)
-                                ->prefix('Rp')
-                                ->readonly()
-                                ->visible(fn (Get $get): bool => $get('metode_pembayaran') === 'tunai')
-                                ->dehydrated(false),
-
-                            // Tombol Selesaikan Pembayaran
                             Forms\Components\Actions::make([
-                                Forms\Components\Actions\Action::make('selesaikan_pembayaran')
-                                    ->label('Selesaikan Pembayaran')
+                                Forms\Components\Actions\Action::make('simpan_pembayaran')
+                                    ->label('Simpan Pembayaran')
                                     ->color('success')
-                                    ->icon('heroicon-o-check-circle')
-                                    ->requiresConfirmation()
-                                    ->modalHeading('Konfirmasi Pembayaran')
-                                    ->modalDescription('Pastikan nominal sudah benar. Pembayaran tidak bisa dibatalkan.')
-                                    ->modalSubmitActionLabel('Ya, Selesaikan')
-                                    ->visible(fn (Get $get): bool => filled($get('saved_id_pemesanan')))
+                                    ->icon('heroicon-o-check-badge')
                                     ->action(function (Get $get) {
-                                        $pemesanan = Pemesanan::find($get('saved_id_pemesanan'));
+                                        $kode  = $get('kode_pemesanan');
+                                        $pesan = Pemesanan::where('kode_pemesanan', $kode)->first();
 
-                                        if (!$pemesanan) {
-                                            Notification::make()
-                                                ->title('Pesanan tidak ditemukan!')
-                                                ->danger()
-                                                ->send();
-                                            return;
-                                        }
-
-                                        // Cek sudah bayar
-                                        if ($pemesanan->pembayaran()->exists()) {
-                                            Notification::make()
-                                                ->title('Pembayaran sudah ada!')
-                                                ->body('Pesanan ini sudah pernah dibayar.')
+                                        if (! $pesan) {
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Proses pesanan terlebih dahulu!')
                                                 ->warning()
                                                 ->send();
                                             return;
                                         }
 
-                                        $metode     = $get('metode_pembayaran') ?? 'tunai';
-                                        $grandTotal = (float) $pemesanan->total_harga;
-                                        $nominal    = (float) ($get('nominal_bayar') ?? 0);
-
-                                        // Validasi nominal tunai
-                                        if ($metode === 'tunai' && $nominal < $grandTotal) {
-                                            Notification::make()
-                                                ->title('Nominal kurang!')
-                                                ->body('Nominal yang dibayar kurang dari total tagihan.')
-                                                ->danger()
+                                        $jenis = $get('jenis_pembayaran');
+                                        if (! $jenis) {
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Pilih metode pembayaran!')
+                                                ->warning()
                                                 ->send();
                                             return;
                                         }
 
-                                        // Simpan ke tabel pembayaran
-                                        Pembayaran::create([
-                                            'id_pemesanan'     => $pemesanan->id_pemesanan,
-                                            'tgl_bayar'        => today(),
-                                            'jenis_pembayaran' => $metode,
-                                            'gross_amount'     => $grandTotal,
-                                            'order_id'         => $pemesanan->kode_pemesanan,
-                                            'payment_type'     => $metode === 'tunai' ? 'cash' : 'qris',
-                                            'status_code'      => '200',
-                                            'status_message'   => 'Pembayaran ' . $metode . ' berhasil.',
-                                            'transaction_time' => now(),
-                                        ]);
+                                        Pembayaran::updateOrCreate(
+                                            ['id_pemesanan' => $pesan->id_pemesanan],
+                                            [
+                                                'tgl_bayar'        => now()->toDateString(),
+                                                'jenis_pembayaran' => $jenis,
+                                                'transaction_time' => now(),
+                                                'gross_amount'     => $pesan->total_harga,
+                                                'order_id'         => $pesan->kode_pemesanan,
+                                                'payment_type'     => $jenis === 'tunai' ? 'cash' : 'midtrans',
+                                                'status_code'      => '200',
+                                                'status_message'   => $jenis === 'tunai'
+                                                    ? 'Pembayaran tunai berhasil.'
+                                                    : 'Pending Midtrans.',
+                                            ]
+                                        );
 
-                                        // Update status pemesanan → done
-                                        $pemesanan->update(['status' => 'done']);
-
-                                        Notification::make()
-                                            ->title('Pembayaran Berhasil! 🎉')
-                                            ->body('Pesanan ' . $pemesanan->kode_pemesanan . ' telah lunas.')
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Pembayaran berhasil disimpan!')
                                             ->success()
-                                            ->icon('heroicon-o-check-circle')
-                                            ->duration(6000)
                                             ->send();
                                     }),
-                            ]),
 
+                                // Tombol tutup — redirect ke list tanpa trigger save Filament
+                                Forms\Components\Actions\Action::make('tutup')
+                                    ->label('Tutup & Kembali ke List')
+                                    ->color('gray')
+                                    ->icon('heroicon-o-x-circle')
+                                    ->url(fn () => route('filament.admin.resources.pemesanans.index'))
+                                    ->openUrlInNewTab(false),
+                            ]),
                         ]),
 
-                ])->columnSpan(3)->skippable(fn ($livewire) => !($livewire instanceof \App\Filament\Resources\PemesananResource\Pages\CreatePemesanan)),
-
-                // =====================
-                // Tombol Close
-                // =====================
-                Forms\Components\Actions::make([
-                    Forms\Components\Actions\Action::make('close')
-                        ->label('Tutup / Batalkan')
-                        ->color('gray')
-                        ->icon('heroicon-o-x-circle')
-                        ->url(fn () => static::getUrl('index'))
-                        ->requiresConfirmation()
-                        ->modalHeading('Batalkan Pemesanan?')
-                        ->modalDescription('Data yang belum diproses akan hilang. Yakin ingin keluar?')
-                        ->modalSubmitActionLabel('Ya, Keluar'),
-                ])->columnSpan(3)->alignEnd(),
-
-            ])->columns(3);
+                ])->columnSpan('full'),
+            ]);
     }
 
-    // =============================================
-    // Helper: hitung ulang total_harga dari repeater
-    // $overrideSubtotal: nilai subtotal terbaru yang belum ke-commit ke state
-    // =============================================
-    protected static function recalcTotal(Get $get, Set $set, ?float $overrideSubtotal = null): void
-    {
-        $items = array_values($get('items_layanan') ?? []);
-
-        // Kalau ada override, ambil semua subtotal dari state kecuali item terakhir
-        // yang baru diupdate — ganti dengan override
-        if ($overrideSubtotal !== null) {
-            $allItems   = array_values($items);
-            $totalItems = count($allItems);
-            $total      = 0;
-
-            foreach ($allItems as $i => $item) {
-                if ($i === $totalItems - 1) {
-                    // Item terakhir yang baru diupdate, pakai override
-                    $total += $overrideSubtotal;
-                } else {
-                    $total += (float) ($item['subtotal'] ?? 0);
-                }
-            }
-        } else {
-            // Kalkulasi normal (tambah/hapus item, ganti layanan)
-            $total = collect($items)->sum(fn ($item) => (float) ($item['subtotal'] ?? 0));
-        }
-
-        $set('total_harga', $total);
-        self::recalcGrandTotal($get, $set, $total);
-    }
-
-    // =============================================
-    // Helper: hitung grand_total = total_harga + ongkir
-    // =============================================
-    protected static function recalcGrandTotal(Get $get, Set $set, ?float $totalHarga = null): void
-    {
-        $total  = $totalHarga ?? (float) ($get('total_harga') ?? 0);
-        $ongkir = in_array($get('pengantaran'), ['antar-jemput', 'antar saja'])
-            ? (float) ($get('ongkir') ?? 0)
-            : 0;
-        $set('grand_total', $total + $ongkir);
-    }
-
-    // =============================================
-    // Table
-    // =============================================
+    // =========================================================================
+    // TABLE
+    // =========================================================================
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
                 TextColumn::make('kode_pemesanan')
-                    ->label('Kode Pemesanan')
+                    ->label('Kode Pesanan')
                     ->searchable()
-                    ->weight('bold'),
-
-                TextColumn::make('member.nama_pelanggan')
-                    ->label('Nama Pelanggan')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('layanan.nama_layanan')
-                    ->label('Layanan Utama')
-                    ->sortable()
-                    ->searchable(),
-
-                TextColumn::make('berat_kg')
-                    ->label('Berat/Jml')
                     ->sortable(),
 
-                TextColumn::make('total_harga')
-                    ->label('Total Harga')
-                    ->formatStateUsing(fn ($state): string => 'Rp ' . number_format($state, 0, ',', '.'))
-                    ->sortable()
-                    ->alignment('end')
-                    ->weight('bold'),
+                TextColumn::make('member.nama_pelanggan')
+                    ->label('Pelanggan')
+                    ->searchable()
+                    ->sortable(),
 
                 TextColumn::make('pengantaran')
+                    ->label('Pengantaran')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
                         'antar-jemput'  => 'info',
@@ -592,61 +442,51 @@ class PemesananResource extends Resource
                         default      => 'gray',
                     }),
 
+                TextColumn::make('total_harga')
+                    ->label('Total')
+                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format((float) $state, 0, ',', '.'))
+                    ->sortable()
+                    ->alignment('end'),
+
                 TextColumn::make('tgl_pesan')
-                    ->label('Tanggal Pesan')
-                    ->date()
+                    ->label('Tgl Pesan')
+                    ->date('d/m/Y')
                     ->sortable(),
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->label('Filter Status')
+                    ->label('Status')
                     ->options([
                         'on process' => 'On Process',
                         'done'       => 'Done',
                     ]),
 
                 SelectFilter::make('pengantaran')
-                    ->label('Filter Pengantaran')
+                    ->label('Pengantaran')
                     ->options([
-                        'antar-jemput'  => 'Antar-Jemput',
+                        'antar-jemput'  => 'Antar Jemput',
                         'antar saja'    => 'Antar Saja',
                         'ambil sendiri' => 'Ambil Sendiri',
                     ]),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-
-                // Edit = hanya ubah status via modal kecil
-                Tables\Actions\Action::make('edit')
-                    ->label('Edit Status')
-                    ->icon('heroicon-o-pencil-square')
-                    ->color('warning')
-                    ->form([
-                        Select::make('status')
-                            ->label('Status')
-                            ->options([
-                                'on process' => 'On Process',
-                                'done'       => 'Done',
-                            ])
-                            ->required()
-                            ->default(fn (Pemesanan $record): string => $record->status),
-                    ])
-                    ->fillForm(fn (Pemesanan $record): array => [
-                        'status' => $record->status,
-                    ])
-                    ->action(function (Pemesanan $record, array $data): void {
-                        $record->update(['status' => $data['status']]);
-
-                        Notification::make()
-                            ->title('Status diperbarui!')
-                            ->body('Pesanan ' . $record->kode_pemesanan . ' → ' . strtoupper($data['status']))
-                            ->success()
-                            ->send();
-                    })
-                    ->modalHeading('Ubah Status Pemesanan')
-                    ->modalSubmitActionLabel('Simpan'),
-
+                Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
+            ])
+            ->headerActions([
+                Action::make('downloadPdf')
+                    ->label('Unduh PDF')
+                    ->icon('heroicon-o-document-arrow-down')
+                    ->color('success')
+                    ->action(function () {
+                        $pemesanan = Pemesanan::with(['member', 'detailPemesanan', 'pembayaran'])->get();
+                        $pdf = Pdf::loadView('pdf.pemesanan', ['pemesanan' => $pemesanan]);
+                        return response()->streamDownload(
+                            fn () => print($pdf->output()),
+                            'pemesanan-list.pdf'
+                        );
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -666,6 +506,77 @@ class PemesananResource extends Resource
             'index'  => Pages\ListPemesanans::route('/'),
             'create' => Pages\CreatePemesanan::route('/create'),
             'edit'   => Pages\EditPemesanan::route('/{record}/edit'),
+            'view'   => Pages\ViewPemesanan::route('/{record}'),
         ];
+    }
+
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
+
+    /**
+     * Recalculate total_harga = subtotal semua layanan + ongkir.
+     */
+    public static function recalcTotal(Get $get, Set $set): void
+    {
+        $items   = $get('detailPemesanan') ?? [];
+        $layanan = collect($items)->sum(fn ($i) => (int) ($i['subtotal'] ?? 0));
+        $isAmbil = $get('pengantaran') === 'ambil sendiri';
+        $ongkir  = $isAmbil ? 0 : (float) ($get('ongkir') ?? 0);
+        $set('total_harga', $layanan + $ongkir);
+    }
+
+    /**
+     * Simpan / update pemesanan + detail_pemesanan dari tombol "Proses Pesanan".
+     * berat_kg & id_layanan sudah dihapus dari tabel pemesanan.
+     */
+    public static function simpanPemesanan(Get $get): void
+    {
+        $kode  = $get('kode_pemesanan');
+        $items = $get('detailPemesanan') ?? [];
+
+        $totalLayanan = collect($items)->sum(fn ($i) => (int) ($i['subtotal'] ?? 0));
+        $isAmbil      = ($get('pengantaran') ?? 'ambil sendiri') === 'ambil sendiri';
+        $ongkir       = $isAmbil ? 0 : (float) ($get('ongkir') ?? 0);
+        $totalHarga   = $totalLayanan + $ongkir;
+
+        $pemesanan = Pemesanan::updateOrCreate(
+            ['kode_pemesanan' => $kode],
+            [
+                'id_pelanggan' => $get('id_pelanggan'),
+                'tgl_pesan'    => $get('tgl_pesan') ?? today(),
+                'status'       => $get('status') ?? 'on process',
+                'total_harga'  => $totalHarga,
+                'ongkir'       => $ongkir,
+                'pengantaran'  => $get('pengantaran') ?? 'ambil sendiri',
+            ]
+        );
+
+        // Hapus detail lama lalu insert ulang agar tidak duplikat
+        DetailPemesanan::where('id_pemesanan', $pemesanan->id_pemesanan)->delete();
+
+        foreach ($items as $item) {
+            if (empty($item['id_layanan'])) {
+                continue;
+            }
+
+            $layananDb = Layanan::find($item['id_layanan']);
+            $harga     = (float) ($layananDb?->harga_per_kg ?? $item['harga_per_kg'] ?? 0);
+            $berat     = (float) ($item['berat_kg'] ?? 1);
+
+            DetailPemesanan::create([
+                'id_pemesanan' => $pemesanan->id_pemesanan,
+                'id_layanan'   => $item['id_layanan'],
+                'nama_layanan' => $layananDb?->nama_layanan ?? $item['nama_layanan'] ?? null,
+                'harga_per_kg' => $harga,
+                'berat_kg'     => $berat,
+                'subtotal'     => (int) ($harga * $berat),
+            ]);
+        }
+
+        \Filament\Notifications\Notification::make()
+            ->title('Pesanan berhasil diproses!')
+            ->success()
+            ->send();
     }
 }
