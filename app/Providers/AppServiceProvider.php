@@ -19,20 +19,20 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-//     public function boot(): void
-//     {
-//         // Untuk ngrok (https lokal)
-//         if (config('app.env') === 'local') {
-//             \URL::forceScheme('https');
-//         }
+    public function boot(): void
+    {
+        // Untuk ngrok (https lokal)
+        if (config('app.env') === 'local') {
+            \URL::forceScheme('https');
+        }
 
-//         // Inject Midtrans Snap.js ke head Filament admin panel
-//         FilamentView::registerRenderHook(
-//             'panels::head.end',
-//             fn () => Blade::render(
-//                 '<script src="https://app.sandbox.midtrans.com/snap/snap.js" 
-//                     data-client-key="{{ config(\'midtrans.client_key\') }}"></script>'
-//             ),
-//         );
-//     }
+        // Inject Midtrans Snap.js ke head Filament admin panel
+        FilamentView::registerRenderHook(
+            'panels::head.end',
+            fn () => Blade::render(
+                '<script src="https://app.sandbox.midtrans.com/snap/snap.js" 
+                    data-client-key="{{ config(\'midtrans.client_key\') }}"></script>'
+            ),
+        );
+    }
 }
