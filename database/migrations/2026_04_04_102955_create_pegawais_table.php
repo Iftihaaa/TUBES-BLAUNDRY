@@ -12,11 +12,12 @@ return new class extends Migration
     public function up(): void
 {
     Schema::create('pegawais', function (Blueprint $table) {
-        $table->id();
+        $table->id('id_pegawai');
         $table->string('nama');
         $table->string('jabatan');
         $table->string('no_telp');
         $table->text('alamat');
+        $table->decimal('gaji_pokok', 15, 2)->default(0);
         $table->timestamps();
     });
 }

@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Filament\Resources\AkunCOAResource\Pages;
+namespace App\Filament\Resources\AkunCoaResource\Pages;
 
-use App\Filament\Resources\AkunCOAResource;
+use App\Filament\Resources\AkunCoaResource;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateAkunCOA extends CreateRecord
 {
-    protected static string $resource = AkunCOAResource::class;
+    protected static string $resource = AkunCoaResource::class;
 }
