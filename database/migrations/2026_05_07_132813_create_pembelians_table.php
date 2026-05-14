@@ -9,15 +9,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pembelians', function (Blueprint $table) {
+
             $table->id();
 
-            $table->foreignId('member_id')
-                ->constrained('members')
-                ->cascadeOnDelete();
+            $table->unsignedBigInteger('id_pelanggan');
 
             $table->date('tgl_beli');
+
             $table->string('jenis_pembelian');
+
             $table->text('keterangan')->nullable();
+
             $table->decimal('total_harga', 12, 2)->default(0);
 
             $table->enum('status', [
@@ -27,6 +29,11 @@ return new class extends Migration
             ])->default('pending');
 
             $table->timestamps();
+
+            $table->foreign('id_pelanggan')
+                ->references('id_pelanggan')
+                ->on('members')
+                ->onDelete('cascade');
         });
     }
 

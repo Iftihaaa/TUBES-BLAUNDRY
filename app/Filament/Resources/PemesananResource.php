@@ -27,6 +27,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Actions\Action;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\HtmlString;
 
 class PemesananResource extends Resource
 {
@@ -275,7 +276,7 @@ class PemesananResource extends Resource
 
                                     Placeholder::make('info_proses')
                                         ->label('')
-                                        ->content('Ubah status pesanan sesuai kondisi laundry saat ini. Setelah selesai diproses, ubah ke "Done" sebelum melanjutkan ke pembayaran.'),
+                                        ->content('Ubah status pesanan sesuai kondisi laundry saat ini. Ubah status pesanan ke "Done" jika pesanan sudah selesai diproses.'),
                                 ])
                                 ->columns(2),
                         ]),
@@ -327,6 +328,28 @@ class PemesananResource extends Resource
                                             $set('kembalian', max(0, (float) $state - $tagihan));
                                         }),
 
+                                    Placeholder::make('metode_pembayaran_tersimpan')
+                                        ->label('Metode Pembayaran Tersimpan')
+                                        ->content(function (Get $get): string {
+                                            $kode = $get('kode_pemesanan');
+                                            $pesan = Pemesanan::where('kode_pemesanan', $kode)->first();
+                                            if (!$pesan) return '-';
+                                            
+                                            $pembayaran = Pembayaran::where('id_pemesanan', $pesan->id_pemesanan)->first();
+                                            if (!$pembayaran) return 'Belum ada pembayaran';
+                                            
+                                            return match($pembayaran->jenis_pembayaran) {
+                                                'tunai'    => 'Tunai',
+                                                'midtrans' => 'Pembayaran Lain (Midtrans)',
+                                                default    => $pembayaran->jenis_pembayaran ?? '-',
+                                            };
+                                        })
+                                            ->visible(fn (Get $get): bool =>         // ← tambah ini
+                                                Pembayaran::whereHas('pemesanan', fn ($q) =>
+                                                    $q->where('kode_pemesanan', $get('kode_pemesanan'))
+                                                )->exists()
+                                            ),
+
                                     Placeholder::make('kembalian')
                                         ->label('Kembalian')
                                         ->content(function (Get $get): string {
@@ -338,9 +361,74 @@ class PemesananResource extends Resource
                                         })
                                         ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'tunai'),
 
-                                    Placeholder::make('info_midtrans')
+                                    // ── MIDTRANS: auto-trigger snap popup ──────
+                                    // Begitu pilih Midtrans, x-init Alpine langsung
+                                    // fetch snap token & buka popup otomatis
+                                    Placeholder::make('midtrans_snap')
                                         ->label('')
-                                        ->content('Integrasi Midtrans akan tersedia segera. Simpan pesanan terlebih dahulu.')
+                                        ->columnSpan(2)
+                                        ->content(function (Get $get): HtmlString {
+                                            if ($get('jenis_pembayaran') !== 'midtrans') {
+                                                return new HtmlString('');
+                                            }
+ 
+                                            $kode = e($get('kode_pemesanan'));
+ 
+                                            return new HtmlString(<<<HTML
+                                            <div
+                                                x-data="{
+                                                    status: '⏳ Membuka halaman pembayaran Midtrans...',
+                                                    statusClass: 'text-gray-500',
+                                                    init() {
+                                                        setTimeout(() => this.openSnap(), 700);
+                                                    },
+                                                    openSnap() {
+                                                        fetch('/midtrans/snap-token', {
+                                                            method: 'POST',
+                                                            headers: {
+                                                                'Content-Type': 'application/json',
+                                                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content,
+                                                            },
+                                                            body: JSON.stringify({ kode_pemesanan: '{$kode}' }),
+                                                        })
+                                                        .then(r => r.json())
+                                                        .then(data => {
+                                                            if (!data.success) {
+                                                                this.status = '❌ Gagal: ' + (data.message || 'Terjadi kesalahan.');
+                                                                this.statusClass = 'text-red-600';
+                                                                return;
+                                                            }
+                                                            this.status = '⏳ Menunggu pembayaran...';
+                                                            snap.pay(data.snap_token, {
+                                                                onSuccess: (result) => {
+                                                                    this.status = '✅ Pembayaran berhasil! Order: ' + result.order_id;
+                                                                    this.statusClass = 'text-green-600';
+                                                                },
+                                                                onPending: (result) => {
+                                                                    this.status = '⏳ Menunggu pembayaran... Order: ' + result.order_id;
+                                                                    this.statusClass = 'text-yellow-600';
+                                                                },
+                                                                onError: (result) => {
+                                                                    this.status = '❌ Gagal: ' + result.status_message;
+                                                                    this.statusClass = 'text-red-600';
+                                                                },
+                                                                onClose: () => {
+                                                                    this.status = '💬 Popup ditutup. Pilih metode lain atau klik Midtrans lagi untuk membuka ulang.';
+                                                                    this.statusClass = 'text-gray-500';
+                                                                },
+                                                            });
+                                                        })
+                                                        .catch(err => {
+                                                            this.status = '❌ Error: ' + err.message;
+                                                            this.statusClass = 'text-red-600';
+                                                        });
+                                                    }
+                                                }"
+                                            >
+                                                <p class="text-sm font-medium" :class="statusClass" x-text="status"></p>
+                                            </div>
+                                            HTML);
+                                        })
                                         ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'midtrans'),
                                 ])
                                 ->columns(2),
@@ -392,14 +480,6 @@ class PemesananResource extends Resource
                                             ->success()
                                             ->send();
                                     }),
-
-                                // Tombol tutup — redirect ke list tanpa trigger save Filament
-                                Forms\Components\Actions\Action::make('tutup')
-                                    ->label('Tutup & Kembali ke List')
-                                    ->color('gray')
-                                    ->icon('heroicon-o-x-circle')
-                                    ->url(fn () => route('filament.admin.resources.pemesanans.index'))
-                                    ->openUrlInNewTab(false),
                             ]),
                         ]),
 
