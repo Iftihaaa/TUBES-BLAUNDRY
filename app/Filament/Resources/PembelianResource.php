@@ -22,9 +22,6 @@ class PembelianResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-cart';
     protected static ?string $navigationLabel = 'Pembelian';
     protected static ?string $navigationGroup = 'Transaksi';
-
-     protected static ?string $navigationGroup = 'Transaksi';
-
     public static function form(Form $form): Form
     {
         return $form
