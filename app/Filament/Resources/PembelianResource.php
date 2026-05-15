@@ -27,6 +27,8 @@ class PembelianResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Pembelians';
 
+     protected static ?string $navigationGroup = 'Transaksi';
+
     public static function form(Form $form): Form
     {
         return $form
