@@ -14,7 +14,7 @@ class PegawaiResource extends Resource
 {
     protected static ?string $model = Pegawai::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-user-group';
 
     protected static ?string $navigationLabel = 'Pegawai';
     protected static ?string $pluralLabel = 'Pegawai';
@@ -34,13 +34,17 @@ class PegawaiResource extends Resource
                 Forms\Components\TextInput::make('jabatan')
                     ->required(),
 
-               Forms\Components\TextInput::make('no_telp')
-    ->label('No Telepon')
-    ->tel()
-    ->placeholder('Contoh: 08123456789')
-    ->maxLength(20),
+                Forms\Components\TextInput::make('no_telp')
+                    ->label('No Telepon')
+                    ->tel(),
 
                 Forms\Components\Textarea::make('alamat'),
+                
+                Forms\Components\TextInput::make('gaji_pokok')
+                    ->label('Gaji Pokok')
+                    ->numeric()
+                    ->required(),
+
             ]);
     }
 
@@ -54,7 +58,12 @@ class PegawaiResource extends Resource
                 Tables\Columns\TextColumn::make('nama')->searchable(),
                 Tables\Columns\TextColumn::make('jabatan'),
                 Tables\Columns\TextColumn::make('no_telp'),
-                Tables\Columns\TextColumn::make('alamat')->limit(30),
+                Tables\Columns\TextColumn::make('alamat')->limit(30),              
+                Tables\Columns\TextColumn::make('gaji_pokok')
+                         ->money('IDR'),
+
+
+
             ])
             ->filters([
                 //

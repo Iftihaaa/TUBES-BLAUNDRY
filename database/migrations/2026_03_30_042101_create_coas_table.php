@@ -6,19 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Run the migrations.
+     */
     public function up(): void
     {
-        Schema::create('akun_coas', function (Blueprint $table) {
+        Schema::create('coa', function (Blueprint $table) {
             $table->id();
-            $table->string('header_akun');
+            $table->integer('header_akun');
             $table->string('kode_akun');
             $table->string('nama_akun');
             $table->timestamps();
         });
     }
 
+    /**
+     * Reverse the migrations.
+     */
     public function down(): void
     {
-        Schema::dropIfExists('akun_coas');
+        Schema::dropIfExists('coa');
     }
 };

@@ -1,0 +1,50 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('penggajian', function (Blueprint $table) {
+    $table->id();
+
+    // ✅ Ganti foreignId dengan unsignedBigInteger + foreign manual
+    $table->unsignedBigInteger('id_pegawai');
+    $table->foreign('id_pegawai')
+          ->references('id_pegawai')  // sesuai primary key di tabel pegawais
+          ->on('pegawais');
+
+    // ✅ kode_akun → tabel akuncoa primary key-nya 'id', jadi ini aman
+    $table->unsignedBigInteger('kode_akun')->nullable();
+    $table->foreign('kode_akun')
+          ->references('id')
+          ->on('akuncoa');
+
+    $table->integer('jumlah_hadir')->default(0);
+    $table->integer('jumlah_sakit')->default(0);
+    $table->integer('jumlah_izin')->default(0);
+    $table->integer('jumlah_alpa')->default(0);
+    $table->double('gaji_pokok')->default(0);
+    $table->double('potongan')->default(0);
+    $table->string('bonus')->default('tidak');
+    $table->double('total_gaji')->default(0);
+    $table->string('metode_pembayaran')->nullable();
+    $table->string('status_pembayaran')->default('belum dibayar');
+    $table->timestamps();
+});
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('penggajian');
+    }
+};
