@@ -39,27 +39,31 @@ class PegawaiResource extends Resource
                     ->tel(),
 
                 Forms\Components\Textarea::make('alamat'),
+                
+                Forms\Components\TextInput::make('gaji_pokok')
+                    ->label('Gaji Pokok')
+                    ->numeric()
+                    ->required(),
+
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('id_pegawai')
             ->columns([
-                Tables\Columns\TextColumn::make('id_pegawai')
-                    ->label('ID Pegawai')
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('nama')
-                    ->searchable(),
-
+                Tables\Columns\TextColumn::make('id')
+                        ->label('ID Pegawai')
+                        ->sortable(),
+                Tables\Columns\TextColumn::make('nama')->searchable(),
                 Tables\Columns\TextColumn::make('jabatan'),
-
                 Tables\Columns\TextColumn::make('no_telp'),
+                Tables\Columns\TextColumn::make('alamat')->limit(30),              
+                Tables\Columns\TextColumn::make('gaji_pokok')
+                         ->money('IDR'),
 
-                Tables\Columns\TextColumn::make('alamat')
-                    ->limit(30),
+
+
             ])
             ->filters([
                 //

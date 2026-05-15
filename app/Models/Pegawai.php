@@ -15,6 +15,11 @@ class Pegawai extends Model
         'jabatan',
         'no_telp',
         'alamat',
+        'gaji_pokok',
+    ];
+
+    protected $casts = [
+        'gaji_pokok' => 'decimal:2',
     ];
 
     public function absensi()
