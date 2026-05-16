@@ -9,7 +9,6 @@ class Penggajian extends Model
     protected $table = 'penggajian';
 
     protected $fillable = [
-
         'id_penggajian',
         'id_pegawai',
         'tanggal_bayar',
@@ -20,11 +19,16 @@ class Penggajian extends Model
         'nominal_bonus',
         'total_gaji',
         'status_pembayaran',
-
     ];
 
     public function pegawai()
     {
         return $this->belongsTo(Pegawai::class, 'id_pegawai', 'id_pegawai');
+    }
+
+    // Relasi balik ke PencatatanBiaya (opsional)
+    public function pencatatanBiaya()
+    {
+        return $this->hasMany(PencatatanBiaya::class, 'id_penggajian', 'id');
     }
 }

@@ -1,81 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
     <title>Laporan Pencatatan Biaya</title>
+
     <style>
-        body { font-family: sans-serif; font-size: 12px; }
-        .report-box {
-            width: 100%;
-            padding: 20px;
-            border: 1px solid #eee;
+        body {
+            font-family: sans-serif;
         }
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 20px;
         }
-        table th, table td {
-            border: 1px solid #ddd;
+
+        th, td {
+            border: 1px solid black;
             padding: 8px;
+            font-size: 12px;
         }
-        table th {
-            background: #f2f2f2;
-            text-align: left;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .title {
-            font-size: 16px;
-            font-weight: bold;
-        }
-        .info {
-            margin-top: 10px;
-            line-height: 1.5;
+
+        th {
+            background: #dddddd;
         }
     </style>
 </head>
 <body>
-    <div class="report-box">
-        <div class="title">LAPORAN PENCATATAN BIAYA</div>
 
-        <div class="info">
-            <strong>Periode:</strong> {{ $periode ?? 'Semua' }}<br>
-            <strong>Tanggal Cetak:</strong> {{ date('d-m-Y') }}
-        </div>
+<h2>Laporan Pencatatan Biaya</h2>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Tanggal</th>
-                    <th>Jenis Beban</th>
-                    <th>Pegawai</th>
-                    <th>COA</th>
-                    <th>Nominal</th>
-                    <th>Keterangan</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($biayas as $biaya)
-                <tr>
-                    <td>{{ \Carbon\Carbon::parse($biaya->tanggal_catat)->format('d-m-Y') }}</td>
-                    <td>{{ $biaya->jenis_beban }}</td>
-                    <td>{{ $biaya->pegawai->nama_pegawai ?? 'N/A' }}</td>
-                    <td>{{ $biaya->coa->nama_akun ?? 'N/A' }}</td>
-                    <td class="text-right">{{ rupiah($biaya->nominal, 0, ',', '.') }}</td>
-                    <td>{{ $biaya->keterangan ?? '-' }}</td>
-                </tr>
-                @endforeach
-                <tr>
-                    <td colspan="4" class="text-right"><strong>Total</strong></td>
-                    <td class="text-right"><strong>{{ rupiah($total ?? collect($biayas)->sum('nominal'), 0, ',', '.') }}</strong></td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
+<p>
+    Periode :
+    {{ $periode }}
+</p>
 
-        <p style="margin-top: 30px;">Laporan ini dibuat secara otomatis oleh sistem.</p>
-    </div>
+<table>
+    <thead>
+        <tr>
+            <th>No</th>
+            <th>Tanggal</th>
+            <th>Pegawai</th>
+            <th>Jenis Beban</th>
+            <th>Nominal</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach($biayas as $item)
+        <tr>
+            <td>{{ $loop->iteration }}</td>
+            <td>{{ $item->tanggal_catat }}</td>
+            <td>{{ $item->pegawai->nama ?? '-' }}</td>
+            <td>{{ $item->jenis_beban }}</td>
+            <td>
+                Rp {{ number_format($item->nominal,0,',','.') }}
+            </td>
+        </tr>
+        @endforeach
+    </tbody>
+</table>
+
+<h3>
+    Total Pengeluaran :
+    Rp {{ number_format($total,0,',','.') }}
+</h3>
+
 </body>
 </html>
