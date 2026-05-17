@@ -12,15 +12,22 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('pencatatan_biaya', function (Blueprint $table) {
-            $table->id('id_pencatatan_beban');
-            $table->foreignId('id_coa')->constrained('akunCOA')->cascadeOnDelete(); // Relasi ke tabel coa
-            $table->foreignId('id_pegawai')->constrained('pegawais')->cascadeOnDelete(); // Relasi ke tabel pegawais
-            $table->date('tanggal_catat'); // Tanggal pencatatan
-            $table->string('jenis_beban'); // Nama atau jenis bebannya
-            $table->decimal('nominal', 15, 2); // Nominal biaya  dengan presisi desimal[cite: 1]
-            $table->string('keterangan')->nullable();
-            $table->timestamps();
-        });
+    $table->id('id_pencatatan_beban');
+    
+    // Fix 1: pakai constrained dengan nama kolom yang benar
+    $table->unsignedBigInteger('id_coa');
+    $table->foreign('id_coa')->references('id')->on('akuncoa')->cascadeOnDelete();
+    
+    // Fix 2: referensi ke id_pegawai, bukan id
+    $table->unsignedBigInteger('id_pegawai');
+    $table->foreign('id_pegawai')->references('id_pegawai')->on('pegawais')->cascadeOnDelete();
+    
+    $table->date('tanggal_catat');
+    $table->string('jenis_beban');
+    $table->decimal('nominal', 15, 2);
+    $table->string('keterangan')->nullable();
+    $table->timestamps();
+});
     }
 
     /**
