@@ -21,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Set locale Carbon ke Bahasa Indonesia
+        \Carbon\Carbon::setLocale('id');
+
         // Untuk ngrok (https lokal)
         if (config('app.env') === 'local') {
             \URL::forceScheme('https');

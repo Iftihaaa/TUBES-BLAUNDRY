@@ -1,20 +1,32 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
+use App\Mail\LaporanBeban;
+use Illuminate\Support\Facades\Mail;
+use App\Http\Controllers\PengirimanEmailController;
 use App\Http\Controllers\MidtransController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-// ================================================================
-// TAMBAHKAN KE routes/web.php
-// ================================================================
+Route::get('/test-login', function () {
+    $user = User::first();
+    if ($user) {
+        Auth::login($user);
+        return redirect('/admin');
+    }
+    return 'No user found. Run: php artisan db:seed';
+});
 
-// Midtrans - generate snap token (butuh CSRF, dipanggil dari Filament admin)
-Route::post('/midtrans/snap-token', [App\Http\Controllers\MidtransController::class, 'getSnapToken'])
+Route::post('/midtrans/snap-token', [MidtransController::class, 'getSnapToken'])
     ->name('midtrans.snap-token');
 
-// Cek status pembayaran manual (opsional, bisa diakses dari browser admin)
-Route::get('/midtrans/cek-status', [App\Http\Controllers\MidtransController::class, 'cekStatus'])
+Route::get('/midtrans/cek-status', [MidtransController::class, 'cekStatus'])
     ->name('midtrans.cek-status');
+
+// Tes kirim email laporan beban
+Route::get('/proses_kirim_email_laporan_beban', [PengirimanEmailController::class, 'proses_kirim_email_laporan_beban'])
+    ->name('proses_kirim_email_laporan_beban');
