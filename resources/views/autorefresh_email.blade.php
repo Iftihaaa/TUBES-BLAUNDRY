@@ -1,7 +1,7 @@
 <?php
 
 $page = $_SERVER['PHP_SELF'];
-$sec = "60";
+$sec = "10";
 date_default_timezone_set('Asia/Jakarta');
 
 ?>
@@ -13,6 +13,7 @@ date_default_timezone_set('Asia/Jakarta');
     <?php
         echo "Watch the page reload itself in 10 second!<br>";
         echo "Tanggal dan Waktu sekarang adalah " . date("Y-m-d h:i:sa") . "<br>";
+        echo "Sistem sedang memproses pengiriman email pemesanan...<br>";
     ?>
     
     </body>
