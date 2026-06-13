@@ -15,8 +15,9 @@ return new class extends Migration
     $table->id('id_pencatatan_beban');
     
     // Fix 1: pakai constrained dengan nama kolom yang benar
-    $table->unsignedBigInteger('id_coa');
+    $table->unsignedBigInteger('id_coa'); //Kolom ini dipakai untuk menyimpan ID akun COA.
     $table->foreign('id_coa')->references('id')->on('akuncoa')->cascadeOnDelete();
+     //Jika akun COA dihapus, maka pencatatan biaya terkait juga akan dihapus (cascade on delete).
     
     // Fix 2: referensi ke id_pegawai, bukan id
     $table->unsignedBigInteger('id_pegawai');

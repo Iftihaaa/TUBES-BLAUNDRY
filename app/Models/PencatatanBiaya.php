@@ -8,7 +8,7 @@ use App\Models\Pegawai;
 use App\Models\AkunCoa;
 use App\Models\Penggajian;
 
-class PencatatanBiaya extends Model
+class PencatatanBiaya extends Model // membuat model pencatatan biaya
 {
     use HasFactory;
 
@@ -16,9 +16,9 @@ class PencatatanBiaya extends Model
     protected $primaryKey = 'id_pencatatan_beban';
     protected $guarded = [];
 
-    public function pegawai()
+    public function pegawai()   // relasi ke tabel pegawai
     {
-        return $this->belongsTo(Pegawai::class, 'id_pegawai');
+        return $this->belongsTo(Pegawai::class, 'id_pegawai'); //relasi ke pegawai dengan foreign key id_pegawai
     }
 
     public function coa()
