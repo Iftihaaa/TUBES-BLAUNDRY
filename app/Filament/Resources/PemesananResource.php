@@ -344,7 +344,7 @@ class PemesananResource extends Resource
                                                 default    => $pembayaran->jenis_pembayaran ?? '-',
                                             };
                                         })
-                                            ->visible(fn (Get $get): bool =>         // ← tambah ini
+                                            ->visible(fn (Get $get): bool =>
                                                 Pembayaran::whereHas('pemesanan', fn ($q) =>
                                                     $q->where('kode_pemesanan', $get('kode_pemesanan'))
                                                 )->exists()
@@ -459,20 +459,28 @@ class PemesananResource extends Resource
                                             return;
                                         }
 
+                                        // ── Data dasar yang selalu di-update ──
+                                        $data = [
+                                            'tgl_bayar'        => now()->toDateString(),
+                                            'jenis_pembayaran' => $jenis,
+                                            'transaction_time' => now(),
+                                            'gross_amount'     => $pesan->total_harga,
+                                            'order_id'         => $pesan->kode_pemesanan,
+                                            'payment_type'     => $jenis === 'tunai' ? 'cash' : 'midtrans',
+                                            'status_code'      => '200',
+                                            'status_message'   => 'Pembayaran tunai berhasil.',
+                                        ];
+
+                                        // ── Kalau Midtrans, jangan timpa status_code
+                                        // & status_message — biarkan webhook yang pegang ──
+                                        if ($jenis === 'midtrans') {
+                                            unset($data['status_code']);
+                                            unset($data['status_message']);
+                                        }
+
                                         Pembayaran::updateOrCreate(
                                             ['id_pemesanan' => $pesan->id_pemesanan],
-                                            [
-                                                'tgl_bayar'        => now()->toDateString(),
-                                                'jenis_pembayaran' => $jenis,
-                                                'transaction_time' => now(),
-                                                'gross_amount'     => $pesan->total_harga,
-                                                'order_id'         => $pesan->kode_pemesanan,
-                                                'payment_type'     => $jenis === 'tunai' ? 'cash' : 'midtrans',
-                                                'status_code'      => '200',
-                                                'status_message'   => $jenis === 'tunai'
-                                                    ? 'Pembayaran tunai berhasil.'
-                                                    : 'Pending Midtrans.',
-                                            ]
+                                            $data
                                         );
 
                                         \Filament\Notifications\Notification::make()

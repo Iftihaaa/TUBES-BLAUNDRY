@@ -200,11 +200,6 @@ class MidtransController extends Controller
             'merchant_id'      => $merchantId      ?? null,
         ]);
 
-        // 5. Jika sudah settlement (terbayar) → update status pemesanan
-        if ($statusCode === '200') {
-            Pemesanan::where('kode_pemesanan', $noFaktur)
-                ->update(['status' => 'done']);
-        }
 
         // 6. Jika expired/cancel/deny → reset pembayaran ke awal
         if (in_array($status, ['expire', 'cancel', 'deny'])) {
