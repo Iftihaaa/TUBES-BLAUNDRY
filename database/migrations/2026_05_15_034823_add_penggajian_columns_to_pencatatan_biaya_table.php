@@ -4,7 +4,7 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-
+//menambah kolom baru bulan_penggajian
 return new class extends Migration
 {
     public function up(): void
@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreign('id_penggajian')
                   ->references('id')
                   ->on('penggajian')
-                  ->nullOnDelete();
+                  ->nullOnDelete(); //Kalau data relasi dihapus, maka foreign key berubah jadi:
 
             // Tambah kolom bulan_penggajian untuk menampilkan label bulan
             $table->string('bulan_penggajian')->nullable()->after('id_penggajian');

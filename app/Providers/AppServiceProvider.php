@@ -8,28 +8,17 @@ use Illuminate\Support\Facades\Blade;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        // Set locale Carbon ke Bahasa Indonesia
         \Carbon\Carbon::setLocale('id');
 
-        // Untuk ngrok (https lokal)
-        if (config('app.env') === 'local') {
-            \URL::forceScheme('https');
-        }
+        // Hapus forceScheme agar tidak mengganggu asset lokal
 
-        // Inject Midtrans Snap.js ke head Filament admin panel
         FilamentView::registerRenderHook(
             'panels::head.end',
             fn () => Blade::render(

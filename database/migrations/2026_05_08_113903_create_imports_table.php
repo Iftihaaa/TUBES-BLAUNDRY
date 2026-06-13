@@ -2,7 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Schema; //nyatet proses export
+// /import tabel imports dipakai untuk mencatat aktivitas export/import pada sistem
 
 return new class extends Migration
 {
