@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <style>
         body { font-family: sans-serif; font-size: 14px; color: #333; }
-        .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+        .header { background-color: #4794a9; color: white; padding: 20px; text-align: center; }
         .content { padding: 24px; }
         .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; }
         .badge-success { background-color: #d1fae5; color: #065f46; }

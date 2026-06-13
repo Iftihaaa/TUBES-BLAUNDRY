@@ -33,3 +33,7 @@ Route::get('/proses_kirim_email_laporan_beban', [PengirimanEmailController::clas
     ->name('proses_kirim_email_laporan_beban');
 
 Route::get('/email-pemesanan/proses', [EmailPemesananController::class, 'proses_semua']);
+
+Route::post('/midtrans/callback', [MidtransController::class, 'handleCallback'])
+    ->name('midtrans.callback')
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class]);
