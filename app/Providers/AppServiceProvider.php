@@ -17,7 +17,7 @@ class AppServiceProvider extends ServiceProvider
     {
         \Carbon\Carbon::setLocale('id');
 
-        // Hapus forceScheme agar tidak mengganggu asset lokal
+        // forceScheme dihapus karena bikin CSS Filament tidak load di localhost
 
         FilamentView::registerRenderHook(
             'panels::head.end',

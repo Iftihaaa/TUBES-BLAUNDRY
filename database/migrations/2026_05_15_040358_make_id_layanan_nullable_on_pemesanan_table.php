@@ -8,20 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('pemesanan', 'ongkir')) {
+        if (Schema::hasColumn('pemesanan', 'id_layanan')) {
             Schema::table('pemesanan', function (Blueprint $table) {
-                $table->decimal('ongkir', 10, 2)
-                    ->default(0)
-                    ->after('total_harga');
+                $table->unsignedBigInteger('id_layanan')->nullable()->change();
             });
         }
     }
 
     public function down(): void
     {
-        if (Schema::hasColumn('pemesanan', 'ongkir')) {
+        if (Schema::hasColumn('pemesanan', 'id_layanan')) {
             Schema::table('pemesanan', function (Blueprint $table) {
-                $table->dropColumn('ongkir');
+                $table->unsignedBigInteger('id_layanan')->nullable(false)->change();
             });
         }
     }
