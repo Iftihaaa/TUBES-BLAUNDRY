@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <style>
         body { font-family: sans-serif; font-size: 14px; color: #333; }
-        .header { background-color: #4f46e5; color: white; padding: 20px; text-align: center; }
+        .header { background-color: #4794a9; color: white; padding: 20px; text-align: center; }
         .content { padding: 24px; }
         .footer { text-align: center; font-size: 12px; color: #999; padding: 20px; }
     </style>

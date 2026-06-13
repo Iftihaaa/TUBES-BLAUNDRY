@@ -86,14 +86,18 @@ class EmailPemesananController extends Controller
                 'status_message' => $data->status_message,
             ];
 
-            Mail::to($data->email)->send(new InvoiceMail($dataAtribut, $pdf->output()));
-
-            EmailPemesanan::create([
-                'id_pemesanan'         => $data->id_pemesanan,
-                'jenis_email'          => 'invoice',
-                'status'               => 'sudah terkirim',
-                'tgl_pengiriman_pesan' => now(),
-            ]);
+            try {
+                Mail::to($data->email)->send(new InvoiceMail($dataAtribut, $pdf->output()));
+                
+                EmailPemesanan::create([
+                    'id_pemesanan'         => $data->id_pemesanan,
+                    'jenis_email'          => 'invoice',
+                    'status'               => 'sudah terkirim',
+                    'tgl_pengiriman_pesan' => now(),
+                ]);
+            } catch (\Exception $e) {
+                // Kalau gagal, tidak dicatat → otomatis retry di refresh berikutnya
+            }
         }
     }
 
@@ -127,14 +131,18 @@ class EmailPemesananController extends Controller
                 'pengantaran'    => $data->pengantaran,
             ];
 
-            Mail::to($data->email)->send(new SelesaiMail($dataAtribut));
+            try {
+                Mail::to($data->email)->send(new SelesaiMail($dataAtribut));
 
-            EmailPemesanan::create([
-                'id_pemesanan'         => $data->id_pemesanan,
-                'jenis_email'          => 'selesai',
-                'status'               => 'sudah terkirim',
-                'tgl_pengiriman_pesan' => now(),
-            ]);
+                EmailPemesanan::create([
+                    'id_pemesanan'         => $data->id_pemesanan,
+                    'jenis_email'          => 'selesai',
+                    'status'               => 'sudah terkirim',
+                    'tgl_pengiriman_pesan' => now(),
+                ]);
+            } catch (\Exception $e) {
+                // Kalau gagal, tidak dicatat → otomatis retry di refresh berikutnya
+            }
         }
     }
 }
