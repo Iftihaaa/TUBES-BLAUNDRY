@@ -3,8 +3,6 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
-use Filament\Support\Facades\FilamentView;
-use Illuminate\Support\Facades\Blade;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,16 +13,9 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        \Carbon\Carbon::setLocale('id');
-
-        // forceScheme dihapus karena bikin CSS Filament tidak load di localhost
-
-        FilamentView::registerRenderHook(
-            'panels::head.end',
-            fn () => Blade::render(
-                '<script src="https://app.sandbox.midtrans.com/snap/snap.js" 
-                    data-client-key="{{ config(\'midtrans.client_key\') }}"></script>'
-            ),
-        );
+        //ini seharusnya kosong, kalau dipanggil dari ngrok maka seperti ini
+        if (config('app.env') === 'local' && str_contains(request()->getHost(), 'ngrok')) {
+            \URL::forceScheme('https');
+        }
     }
 }
