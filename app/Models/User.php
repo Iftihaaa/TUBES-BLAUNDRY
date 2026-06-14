@@ -11,6 +11,7 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+    protected $primaryKey = 'id_user';
 
     // Use the default primary key name for the users table
     // protected $primaryKey = 'id';
