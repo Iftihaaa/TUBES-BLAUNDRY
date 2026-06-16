@@ -8,16 +8,19 @@ class Absensi extends Model
 {
     protected $table = 'absensis';
 
-    protected $primaryKey = 'id_absen';
+    protected $primaryKey = 'id';
 
     protected $fillable = [
-        'id_pegawai',
-        'kehadiran',
-        'upload_bukti',
+        'pegawai_id',
+        'tanggal',
+        'jam_masuk',
+        'jam_keluar',
+        'status',
+        'keterangan',
     ];
 
     public function pegawai()
     {
-        return $this->belongsTo(Pegawai::class, 'id_pegawai', 'id_pegawai');
+        return $this->belongsTo(Pegawai::class, 'pegawai_id', 'id_pegawai');
     }
 }

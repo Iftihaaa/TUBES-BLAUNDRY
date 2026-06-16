@@ -30,40 +30,41 @@ class AbsensiResource extends Resource
     {
         return $form
             ->schema([
-
-                Forms\Components\Select::make('id_pegawai')
+                Forms\Components\Select::make('pegawai_id')
                     ->label('Pegawai')
                     ->relationship('pegawai', 'nama')
                     ->searchable()
                     ->required(),
 
-                Forms\Components\Select::make('kehadiran')
+                Forms\Components\DatePicker::make('tanggal')
+                    ->required(),
+
+                Forms\Components\TimePicker::make('jam_masuk')
+                    ->label('Jam Masuk'),
+
+                Forms\Components\TimePicker::make('jam_keluar')
+                    ->label('Jam Keluar'),
+
+                Forms\Components\Select::make('status')
                     ->options([
-                        'Hadir' => 'Hadir',
-                        'Izin' => 'Izin',
-                        'Sakit' => 'Sakit',
+                        'hadir' => 'Hadir',
+                        'izin' => 'Izin',
+                        'sakit' => 'Sakit',
+                        'alpha' => 'Alpha',
                     ])
                     ->required(),
 
-                Forms\Components\FileUpload::make('upload_bukti')
-                    ->label('Upload Bukti')
-                    ->directory('bukti-absensi')
-                    ->disk('public')
-                    ->image()
-                    ->imagePreviewHeight('150')
-                    ->downloadable()
-                    ->openable(),
+                Forms\Components\Textarea::make('keterangan')
+                    ->label('Keterangan'),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->defaultSort('id_absen')
-
+            ->defaultSort('id')
             ->columns([
-
-                Tables\Columns\TextColumn::make('id_absen')
+                Tables\Columns\TextColumn::make('id')
                     ->label('ID')
                     ->sortable(),
 
@@ -71,37 +72,40 @@ class AbsensiResource extends Resource
                     ->label('Nama Pegawai')
                     ->searchable(),
 
-                Tables\Columns\BadgeColumn::make('kehadiran')
+                Tables\Columns\TextColumn::make('tanggal')
+                    ->label('Tanggal')
+                    ->date('d M Y')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('jam_masuk')
+                    ->label('Jam Masuk'),
+
+                Tables\Columns\TextColumn::make('jam_keluar')
+                    ->label('Jam Keluar'),
+
+                Tables\Columns\BadgeColumn::make('status')
                     ->colors([
-                        'success' => 'Hadir',
-                        'warning' => 'Izin',
-                        'danger' => 'Sakit',
+                        'success' => 'hadir',
+                        'warning' => 'izin',
+                        'danger' => 'sakit',
+                        'secondary' => 'alpha',
                     ]),
 
-                Tables\Columns\ImageColumn::make('upload_bukti')
-                    ->label('Bukti')
-                    ->disk('public')
-                    ->square(),
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Tanggal')
-                    ->dateTime('d M Y'),
+                Tables\Columns\TextColumn::make('keterangan')
+                    ->label('Keterangan'),
             ])
 
             ->headerActions([
-
                 Action::make('downloadPdf')
                     ->label('Unduh PDF')
                     ->icon('heroicon-o-document-arrow-down')
                     ->color('success')
-
                     ->form([
-
                         Forms\Components\TextInput::make('bulan')
                             ->type('month')
                             ->required(),
 
-                        Forms\Components\Select::make('id_pegawai')
+                        Forms\Components\Select::make('pegawai_id')
                             ->label('Pegawai')
                             ->options(
                                 \App\Models\Pegawai::pluck('nama', 'id_pegawai')
@@ -109,16 +113,14 @@ class AbsensiResource extends Resource
                             ->searchable()
                             ->required(),
                     ])
-
                     ->action(function (array $data) {
-
                         $bulan = $data['bulan'];
-                        $idPegawai = $data['id_pegawai'];
+                        $pegawaiId = $data['pegawai_id'];
 
                         $absensis = Absensi::with('pegawai')
-                            ->where('id_pegawai', $idPegawai)
-                            ->whereMonth('created_at', \Carbon\Carbon::parse($bulan)->month)
-                            ->whereYear('created_at', \Carbon\Carbon::parse($bulan)->year)
+                            ->where('pegawai_id', $pegawaiId)
+                            ->whereMonth('tanggal', \Carbon\Carbon::parse($bulan)->month)
+                            ->whereYear('tanggal', \Carbon\Carbon::parse($bulan)->year)
                             ->get();
 
                         $pdf = Pdf::loadView('pdf.absensi', [
@@ -133,9 +135,7 @@ class AbsensiResource extends Resource
                     }),
             ])
 
-            ->filters([
-                //
-            ])
+            ->filters([])
 
             ->actions([
                 Tables\Actions\ViewAction::make(),
