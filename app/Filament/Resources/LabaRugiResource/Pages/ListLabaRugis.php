@@ -39,10 +39,8 @@ class ListLabaRugis extends Page
     public int $jumlahPesanan = 0;
     public float $rataRataPesanan = 0; // rata-rata nilai per pesanan (AOV)
 
-    // Tren & proyeksi
+    // Tren
     public array $trenLaba = [];
-    public array $proyeksi = [];
-    public float $targetKenaikan = 10; // persen, bisa digeser user
 
     // Analisa AI tersimpan
     public ?array $analisa = null;
@@ -68,14 +66,6 @@ class ListLabaRugis extends Page
     public function updatedTahun(): void
     {
         $this->refreshPeriode();
-    }
-
-    /**
-     * Saat slider target digeser -> hitung ulang proyeksi saja (ringan).
-     */
-    public function updatedTargetKenaikan(): void
-    {
-        $this->hitungProyeksi();
     }
 
     public function refreshPeriode(): void
@@ -149,11 +139,10 @@ class ListLabaRugis extends Page
         $this->rataRataPesanan = $p['aov'];
 
         $this->loadTren();
-        $this->hitungProyeksi();
     }
 
     /**
-     * Tren laba bersih beberapa bulan terakhir + persen naik/turun.
+     * Tren laba bersih 6 bulan terakhir + persen naik/turun.
      */
     private function loadTren(): void
     {
@@ -189,52 +178,6 @@ class ListLabaRugis extends Page
         }
 
         $this->trenLaba = $tren;
-    }
-
-    /**
-     * Proyeksi target pesanan bulan depan berdasarkan target kenaikan laba.
-     * Beban diasumsikan = rata-rata 3 bulan terakhir (lebih stabil).
-     */
-    public function hitungProyeksi(): void
-    {
-        $awal = Carbon::create($this->tahun, $this->bulan, 1);
-
-        // Rata-rata beban 3 bulan terakhir (yang ada datanya)
-        $bebanList = [];
-        for ($i = 0; $i < 3; $i++) {
-            $d = $awal->copy()->subMonths($i);
-            $b = $this->angkaLaba($d->month, $d->year)['beban'];
-            if ($b > 0) {
-                $bebanList[] = $b;
-            }
-        }
-        $bebanAsumsi = count($bebanList) ? array_sum($bebanList) / count($bebanList) : $this->totalBeban;
-
-        $target = max(0, (float) $this->targetKenaikan);
-        $targetLaba = $this->labaBersih * (1 + $target / 100);
-
-        // Asumsi tidak ada suntikan modal baru
-        $targetPendapatan = $targetLaba + $bebanAsumsi;
-
-        $aov = $this->rataRataPesanan;
-        $targetPesanan = $aov > 0 ? (int) ceil($targetPendapatan / $aov) : 0;
-
-        $bulanDepan = $awal->copy()->addMonth();
-        $hari = $bulanDepan->daysInMonth;
-        $perHari = $targetPesanan > 0 ? (int) ceil($targetPesanan / $hari) : 0;
-
-        $this->proyeksi = [
-            'target_persen' => $target,
-            'beban_asumsi' => $bebanAsumsi,
-            'target_laba' => $targetLaba,
-            'target_pendapatan' => $targetPendapatan,
-            'aov' => $aov,
-            'target_pesanan' => $targetPesanan,
-            'tambahan_pesanan' => max(0, $targetPesanan - $this->jumlahPesanan),
-            'per_hari' => $perHari,
-            'bulan_depan' => $bulanDepan->translatedFormat('F Y'),
-            'bisa_proyeksi' => $aov > 0 && $this->labaBersih != 0,
-        ];
     }
 
     /**
@@ -290,26 +233,17 @@ class ListLabaRugis extends Page
     }
 
     /**
-     * Ringkasan tren & proyeksi untuk dikirim sebagai konteks ke AI.
+     * Ringkasan tren untuk dikirim sebagai konteks ke AI.
      */
     private function ringkasanKonteksAi(): string
     {
         $baris = [];
-        $baris[] = 'Tren laba bersih beberapa bulan terakhir:';
+        $baris[] = 'Tren laba bersih 6 bulan terakhir:';
         foreach ($this->trenLaba as $t) {
             $p = is_null($t['perubahan'])
                 ? ''
                 : ' (' . ($t['perubahan'] >= 0 ? '+' : '') . $t['perubahan'] . '% vs bulan sebelumnya)';
             $baris[] = '- ' . $t['label'] . ': Rp ' . number_format($t['laba'], 0, ',', '.') . $p;
-        }
-
-        if (! empty($this->proyeksi['bisa_proyeksi'])) {
-            $pr = $this->proyeksi;
-            $baris[] = '';
-            $baris[] = 'Proyeksi untuk ' . $pr['bulan_depan'] . ' (target laba naik ' . $pr['target_persen'] . '%):';
-            $baris[] = '- Rata-rata nilai per pesanan: Rp ' . number_format($pr['aov'], 0, ',', '.');
-            $baris[] = '- Target pesanan: ' . $pr['target_pesanan'] . ' pesanan (sekitar ' . $pr['per_hari'] . ' per hari)';
-            $baris[] = '- Jumlah pesanan bulan ini: ' . $this->jumlahPesanan;
         }
 
         return implode("\n", $baris);

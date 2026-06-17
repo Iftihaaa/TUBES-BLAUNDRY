@@ -51,7 +51,7 @@
                 <button type="button" x-on:click="tab='tren'"
                     :class="tab==='tren' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
                     class="flex items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-medium transition">
-                    <span>📈</span> Tren &amp; Proyeksi
+                    <span>📈</span> Rekap Laba Per Bulan
                 </button>
                 <button type="button" x-on:click="tab='ai'"
                     :class="tab==='ai' ? 'border-primary-500 text-primary-600 dark:text-primary-400' : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'"
@@ -131,13 +131,13 @@
                 </x-filament::section>
             </div>
 
-            <?php /* ---------- TAB: TREN & PROYEKSI ---------- */ ?>
+            <?php /* ---------- TAB:  ---------- */ ?>
             <div x-show="tab==='tren'" x-cloak class="space-y-6">
                 <x-filament::section>
                     <x-slot name="heading">
                         <div class="flex items-center gap-2">
                             <x-filament::icon icon="heroicon-m-arrow-trending-up" class="h-5 w-5 text-primary-500" />
-                            Tren Laba Per Bulan
+                            Rekap Laba Per Bulan
                         </div>
                     </x-slot>
 
@@ -171,63 +171,6 @@
                                 </div>
                             </div>
                         @endforeach
-                    </div>
-                </x-filament::section>
-
-                <x-filament::section>
-                    <x-slot name="heading">
-                        <div class="flex items-center gap-2">
-                            <x-filament::icon icon="heroicon-m-flag" class="h-5 w-5 text-warning-500" />
-                            Proyeksi Target Bulan Depan
-                        </div>
-                    </x-slot>
-                    <x-slot name="description">
-                        Geser target kenaikan laba, lalu lihat berapa pesanan yang perlu kamu capai.
-                    </x-slot>
-
-                    <div class="space-y-5">
-                        <div>
-                            <div class="flex items-center justify-between mb-1">
-                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Target kenaikan laba</label>
-                                <span class="text-lg font-bold text-primary-600"><?= (int) $targetKenaikan ?>%</span>
-                            </div>
-                            <input type="range" min="0" max="100" step="5" wire:model.live="targetKenaikan"
-                                class="w-full accent-primary-600" />
-                        </div>
-
-                        @if (! empty($proyeksi['bisa_proyeksi']))
-                            <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-                                <div class="rounded-xl p-4 text-center ring-1 ring-gray-950/5 dark:ring-white/10">
-                                    <div class="text-xs text-gray-400">Target Laba</div>
-                                    <div class="mt-1 font-bold text-success-600"><?= $rupiah($proyeksi['target_laba']) ?></div>
-                                </div>
-                                <div class="rounded-xl p-4 text-center ring-1 ring-gray-950/5 dark:ring-white/10">
-                                    <div class="text-xs text-gray-400">Target Pendapatan</div>
-                                    <div class="mt-1 font-bold text-gray-700 dark:text-gray-200"><?= $rupiah($proyeksi['target_pendapatan']) ?></div>
-                                </div>
-                                <div class="rounded-xl p-4 text-center bg-primary-50 ring-1 ring-primary-200 dark:bg-primary-500/10 dark:ring-primary-500/30">
-                                    <div class="text-xs text-primary-500">Target Pesanan</div>
-                                    <div class="mt-1 text-2xl font-extrabold text-primary-600"><?= number_format($proyeksi['target_pesanan'], 0, ',', '.') ?></div>
-                                    <div class="text-xs text-gray-400">≈ <?= $proyeksi['per_hari'] ?>/hari</div>
-                                </div>
-                                <div class="rounded-xl p-4 text-center ring-1 ring-gray-950/5 dark:ring-white/10">
-                                    <div class="text-xs text-gray-400">Tambahan vs Sekarang</div>
-                                    <div class="mt-1 font-bold text-warning-600">+<?= number_format($proyeksi['tambahan_pesanan'], 0, ',', '.') ?></div>
-                                    <div class="text-xs text-gray-400">pesanan</div>
-                                </div>
-                            </div>
-
-                            <p class="text-center text-sm text-gray-500">
-                                Untuk menaikkan laba <span class="font-semibold text-primary-600"><?= (int) $targetKenaikan ?>%</span>
-                                di <span class="font-semibold"><?= e($proyeksi['bulan_depan']) ?></span>,
-                                kamu perlu sekitar <span class="font-semibold"><?= number_format($proyeksi['target_pesanan'], 0, ',', '.') ?> pesanan</span>
-                                (rata-rata Rp <?= number_format($proyeksi['aov'], 0, ',', '.') ?>/pesanan).
-                            </p>
-                        @else
-                            <p class="text-center text-sm text-gray-400 py-4">
-                                Belum bisa membuat proyeksi — pastikan ada data pesanan & laba di periode ini.
-                            </p>
-                        @endif
                     </div>
                 </x-filament::section>
             </div>

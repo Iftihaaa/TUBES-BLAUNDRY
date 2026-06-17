@@ -148,8 +148,8 @@
                     ? 'text-success-700 ring-success-200 bg-success-50 dark:text-success-400 dark:bg-success-500/10 dark:ring-success-500/30'
                     : 'text-danger-700 ring-danger-200 bg-danger-50 dark:text-danger-400 dark:bg-danger-500/10 dark:ring-danger-500/30' ?>">
                 <?= $seimbang
-                    ? '✅ Neraca seimbang — Aset = Kewajiban + Ekuitas'
-                    : '⚠️ Neraca belum seimbang — ada selisih ' . $rupiah(abs($selisih)) . '. Cek kembali jurnalnya.' ?>
+    ? '✅ Neraca sudah seimbang'
+    : '⚠️ Neraca belum seimbang — ada selisih ' . $rupiah(abs($selisih)) . '. Cek kembali jurnalnya.' ?>
             </div>
         </x-filament::section>
 
