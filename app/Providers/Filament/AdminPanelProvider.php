@@ -41,10 +41,25 @@ class AdminPanelProvider extends PanelProvider
                 Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            // ->widgets([
+            //     Widgets\AccountWidget::class,
+            //     Widgets\FilamentInfoWidget::class,
+            //     // tambahkan ini
+            //     \App\Filament\Widgets\PenjualanPerBulanChart::class,
+            //     \App\Filament\Widgets\PenjualanPerLayananChart::class,
+            //     \App\Filament\Widgets\ProyeksiKas30HariChart::class,
+
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
-            ])
+                \App\Filament\Widgets\DashboardStatsWidget::class,
+                \App\Filament\Widgets\PenjualanPerBulanChart::class,
+                \App\Filament\Widgets\PenjualanPerLayananChart::class,
+                \App\Filament\Widgets\ProyeksiKas30HariChart::class,
+                \App\Filament\Widgets\TrendParfumChart::class,
+            ])    
+            
+          
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
