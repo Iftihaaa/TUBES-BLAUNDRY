@@ -4,7 +4,6 @@ namespace App\Filament\Widgets;
 
 use App\Support\CompetitorAnalysis;
 use Filament\Widgets\Widget;
-use Livewire\Attributes\On;
 
 class CompetitorAnalysisDetailWidget extends Widget
 {
@@ -16,20 +15,9 @@ class CompetitorAnalysisDetailWidget extends Widget
 
     protected int|string|array $columnSpan = 'full';
 
-    /**
-     * @var array<string, mixed>
-     */
-    public array $competitorAnalysis = [];
-
     public static function canView(): bool
     {
         return filled(session(CompetitorAnalysis::SESSION_KEY));
-    }
-
-    #[On('competitor-analysis-updated')]
-    public function refreshAnalysis(): void
-    {
-        $this->competitorAnalysis = session(CompetitorAnalysis::SESSION_KEY, []);
     }
 
     /**
@@ -38,7 +26,7 @@ class CompetitorAnalysisDetailWidget extends Widget
     protected function getViewData(): array
     {
         return [
-            'analysis' => $this->competitorAnalysis ?: session(CompetitorAnalysis::SESSION_KEY, []),
+            'analysis' => session(CompetitorAnalysis::SESSION_KEY, []),
         ];
     }
 }

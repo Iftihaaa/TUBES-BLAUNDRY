@@ -32,25 +32,11 @@ class AnalisisKompetitor extends Page
 
     protected static string $view = 'filament.pages.analisis-kompetitor';
 
-    /**
-     * @var array<string, mixed>
-     */
-    public array $competitorAnalysis = [];
-
     public function mount(): void
     {
-        $this->competitorAnalysis = session(CompetitorAnalysis::SESSION_KEY, []);
+        // Widget membaca session secara mandiri saat render.
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    public function getWidgetData(): array
-    {
-        return [
-            'competitorAnalysis' => $this->competitorAnalysis,
-        ];
-    }
 
     /**
      * @return array<class-string>
@@ -180,10 +166,9 @@ class AnalisisKompetitor extends Page
             return;
         }
 
-        $this->competitorAnalysis = $analysis;
         session()->put(CompetitorAnalysis::SESSION_KEY, $analysis);
 
-        $this->dispatch('competitor-analysis-updated');
+        $this->dispatch('$refresh');
 
         Notification::make()
             ->title('Analisis kompetitor berhasil')
