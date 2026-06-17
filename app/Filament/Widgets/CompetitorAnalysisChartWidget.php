@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Pages\Dashboard;
+use App\Support\CompetitorAnalysis;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Livewire\Attributes\On;
@@ -26,13 +26,13 @@ class CompetitorAnalysisChartWidget extends ChartWidget
 
     public static function canView(): bool
     {
-        return filled(session(Dashboard::COMPETITOR_ANALYSIS_SESSION_KEY));
+        return filled(session(CompetitorAnalysis::SESSION_KEY));
     }
 
     #[On('competitor-analysis-updated')]
     public function refreshAnalysis(): void
     {
-        $this->competitorAnalysis = session(Dashboard::COMPETITOR_ANALYSIS_SESSION_KEY, []);
+        $this->competitorAnalysis = session(CompetitorAnalysis::SESSION_KEY, []);
         $this->cachedData = null;
     }
 
@@ -51,7 +51,7 @@ class CompetitorAnalysisChartWidget extends ChartWidget
      */
     protected function getData(): array
     {
-        $analysis = $this->competitorAnalysis ?: session(Dashboard::COMPETITOR_ANALYSIS_SESSION_KEY, []);
+        $analysis = $this->competitorAnalysis ?: session(CompetitorAnalysis::SESSION_KEY, []);
         $chartData = $analysis['chart_data'] ?? [];
 
         return [

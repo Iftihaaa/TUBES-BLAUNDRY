@@ -2,7 +2,7 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Pages\Dashboard;
+use App\Support\CompetitorAnalysis;
 use Filament\Widgets\Widget;
 use Livewire\Attributes\On;
 
@@ -24,7 +24,7 @@ class CompetitorAnalysisSummaryWidget extends Widget
     #[On('competitor-analysis-updated')]
     public function refreshAnalysis(): void
     {
-        $this->competitorAnalysis = session(Dashboard::COMPETITOR_ANALYSIS_SESSION_KEY, []);
+        $this->competitorAnalysis = session(CompetitorAnalysis::SESSION_KEY, []);
     }
 
     /**
@@ -32,7 +32,7 @@ class CompetitorAnalysisSummaryWidget extends Widget
      */
     protected function getViewData(): array
     {
-        $analysis = $this->competitorAnalysis ?: session(Dashboard::COMPETITOR_ANALYSIS_SESSION_KEY, []);
+        $analysis = $this->competitorAnalysis ?: session(CompetitorAnalysis::SESSION_KEY, []);
 
         return [
             'analysis' => $analysis,
