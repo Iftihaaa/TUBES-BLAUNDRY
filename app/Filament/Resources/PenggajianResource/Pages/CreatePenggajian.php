@@ -7,6 +7,7 @@ use App\Mail\SlipGajiMail;
 
 use Barryvdh\DomPDF\Facade\Pdf;
 
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 use Illuminate\Support\Facades\Mail;
@@ -15,12 +16,7 @@ class CreatePenggajian extends CreateRecord
 {
     protected static string $resource = PenggajianResource::class;
 
-    /*
-    |--------------------------------------------------------------------------
-    | OTOMATIS SET STATUS SUDAH DIBAYAR SEBELUM SIMPAN
-    |--------------------------------------------------------------------------
-    */
-
+    // OTOMATIS SET STATUS SUDAH DIBAYAR SEBELUM SIMPAN
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         $data['status_pembayaran'] = 'sudah dibayar';
@@ -32,18 +28,20 @@ class CreatePenggajian extends CreateRecord
         return $data;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | KIRIM EMAIL + PDF ATTACHMENT KE MAILTRAP SETELAH DATA TERSIMPAN
-    |--------------------------------------------------------------------------
-    */
-
+    // KIRIM EMAIL + PDF ATTACHMENT KE MAILTRAP SETELAH DATA TERSIMPAN
     protected function afterCreate(): void
     {
         $penggajian = $this->record;
 
         // LOAD RELASI PEGAWAI
         $penggajian->load('pegawai');
+
+        // NOTIFIKASI FILAMENT
+        Notification::make()
+            ->title('Penggajian Berhasil Disimpan dan Email Terkirim')
+            ->body('Slip gaji ' . $penggajian->id_penggajian . ' telah dikirim ke email.')
+            ->success()
+            ->send();
 
         // GENERATE PDF
         $pdfContent = Pdf::loadView(
@@ -59,12 +57,7 @@ class CreatePenggajian extends CreateRecord
         );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | REDIRECT KE LIST PENGGAJIAN SETELAH CREATE
-    |--------------------------------------------------------------------------
-    */
-
+    // REDIRECT KE LIST PENGGAJIAN SETELAH CREATE
     protected function getRedirectUrl(): string
     {
         return PenggajianResource::getUrl('index');

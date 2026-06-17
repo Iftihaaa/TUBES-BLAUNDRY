@@ -10,6 +10,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -30,16 +31,35 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): string => '<script src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="' . config('midtrans.client_key') . '"></script>'
+            )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
+            // ->widgets([
+            //     Widgets\AccountWidget::class,
+            //     Widgets\FilamentInfoWidget::class,
+            //     // tambahkan ini
+            //     \App\Filament\Widgets\PenjualanPerBulanChart::class,
+            //     \App\Filament\Widgets\PenjualanPerLayananChart::class,
+            //     \App\Filament\Widgets\ProyeksiKas30HariChart::class,
+
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
-            ])
+                \App\Filament\Widgets\DashboardStatsWidget::class,
+                \App\Filament\Widgets\PenjualanPerBulanChart::class,
+                \App\Filament\Widgets\PenjualanPerLayananChart::class,
+                \App\Filament\Widgets\ProyeksiKas30HariChart::class,
+                \App\Filament\Widgets\TrendParfumChart::class,
+            ])    
+            
+          
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
