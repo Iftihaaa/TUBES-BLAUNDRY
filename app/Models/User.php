@@ -11,8 +11,10 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+    protected $primaryKey = 'id_user';
 
-    protected $primaryKey = 'id_user'; // sesuaikan dengan kolom id di tabel users
+    // Use the default primary key name for the users table
+    // protected $primaryKey = 'id';
 
     /**
      * The attributes that are mass assignable.

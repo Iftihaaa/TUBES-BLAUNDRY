@@ -16,7 +16,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
-use Barryvdh\DomPDF\Facade\Pdf;
+use Barryvdh\DomPDF\Facade\Pdf; //pdf
 
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
@@ -26,7 +26,7 @@ use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 
-use Filament\Tables\Actions\ExportAction;
+use Filament\Tables\Actions\ExportAction; //tombol export excel
 use Filament\Tables\Actions\ExportBulkAction;
 use Filament\Tables\Actions\Action;
 
@@ -86,9 +86,9 @@ class PencatatanBiayaResource extends Resource
                                 ->required()
                                 ->searchable()
                                 ->preload()
-                                ->reactive()
+                                ->reactive() //Field berubah otomatis tanpa reload halaman.
 
-                                ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                ->afterStateUpdated(function ($state, Forms\Set $set) { //Menjalankan proses setelah field berubah.
 
                                     $akun = AkunCoa::find($state);
 

@@ -36,6 +36,7 @@ class PemesananResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
     protected static ?string $navigationLabel = 'Pemesanan';
+    protected static ?string $pluralModelLabel = 'Pemesanan';
 
     protected static ?string $navigationGroup = 'Transaksi';
 
@@ -91,6 +92,11 @@ class PemesananResource extends Resource
                                                 ->required()
                                                 ->tel()
                                                 ->maxLength(20),
+                                            TextInput::make('email')
+                                                ->label('Email')
+                                                ->required()
+                                                ->email()
+                                                ->maxLength(255),
                                             Forms\Components\Textarea::make('alamat')
                                                 ->label('Alamat')
                                                 ->required()
@@ -322,10 +328,19 @@ class PemesananResource extends Resource
                                         ->dehydrated(false)
                                         ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'tunai')
                                         ->afterStateUpdated(function ($state, Get $get, Set $set) {
-                                            $kode      = $get('kode_pemesanan');
-                                            $pesan     = Pemesanan::where('kode_pemesanan', $kode)->first();
-                                            $tagihan   = $pesan ? (float) $pesan->total_harga : 0;
-                                            $set('kembalian', max(0, (float) $state - $tagihan));
+                                            $kode    = $get('kode_pemesanan');
+                                            $pesan   = Pemesanan::where('kode_pemesanan', $kode)->first();
+                                            $tagihan = $pesan ? (float) $pesan->total_harga : 0;
+                                            $nominal = (float) $state;
+                                            $selisih = $nominal - $tagihan;
+
+                                            if ($selisih < 0) {
+                                                $set('kembalian', 0);
+                                                $set('kurang_bayar', abs($selisih)); // simpan nilai kurangnya
+                                            } else {
+                                                $set('kembalian', $selisih);
+                                                $set('kurang_bayar', 0);
+                                            }
                                         }),
 
                                     Placeholder::make('metode_pembayaran_tersimpan')
@@ -360,6 +375,16 @@ class PemesananResource extends Resource
                                             return 'Rp ' . number_format(max(0, $nominal - $tagihan), 0, ',', '.');
                                         })
                                         ->visible(fn (Get $get) => $get('jenis_pembayaran') === 'tunai'),
+
+                                        Placeholder::make('kurang_bayar')
+                                            ->label('⚠️ Kurang Bayar')
+                                            ->content(fn (Get $get): string =>
+                                                'Rp ' . number_format((float) ($get('kurang_bayar') ?? 0), 0, ',', '.')
+                                            )
+                                            ->visible(fn (Get $get) =>
+                                                $get('jenis_pembayaran') === 'tunai' &&
+                                                (float) ($get('kurang_bayar') ?? 0) > 0
+                                            ),
 
                                     // ── MIDTRANS: auto-trigger snap popup ──────
                                     // Begitu pilih Midtrans, x-init Alpine langsung

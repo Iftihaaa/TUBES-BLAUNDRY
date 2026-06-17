@@ -8,17 +8,21 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('pemesanan', function (Blueprint $table) {
-           $table->decimal('ongkir', 10, 2)->default(0)->after('total_harga');
-        });
+        if (!Schema::hasColumn('pemesanan', 'ongkir')) {
+            Schema::table('pemesanan', function (Blueprint $table) {
+                $table->decimal('ongkir', 10, 2)
+                    ->default(0)
+                    ->after('total_harga');
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('pemesanan', function (Blueprint $table) {
-            if (Schema::hasColumn('pemesanan', 'ongkir')) {
+        if (Schema::hasColumn('pemesanan', 'ongkir')) {
+            Schema::table('pemesanan', function (Blueprint $table) {
                 $table->dropColumn('ongkir');
-            }
-        });
+            });
+        }
     }
 };
