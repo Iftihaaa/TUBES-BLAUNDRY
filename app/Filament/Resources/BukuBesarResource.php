@@ -26,7 +26,7 @@ class BukuBesarResource extends Resource
 {
     protected static ?string $model = BukuBesar::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-book-open';
 
     protected static string $view = 'filament.resources.buku-besar-resource.pages.index'; // Tentukan view kustom
 
