@@ -15,7 +15,7 @@ class User extends Authenticatable implements FilamentUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
-    // protected $primaryKey = 'id_user'; // ← DIHAPUS, ini yang bikin login gagal
+    protected $primaryKey = 'id_user'; // ← DIHAPUS, ini yang bikin login gagal
 
     /**
      * The attributes that are mass assignable.
