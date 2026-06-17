@@ -33,7 +33,7 @@
                 <br><br>
                
                 <div class="col-sm-12" style="background-color:white;" align="center">
-                    <b>Toko Mukena</b><br>
+                    <b>B LAUNDRY</b><br>
                     <b>Buku Besar</b><br>
                     <b>
                     Periode 

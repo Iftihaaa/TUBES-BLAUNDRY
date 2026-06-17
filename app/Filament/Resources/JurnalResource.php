@@ -30,6 +30,7 @@ class JurnalResource extends Resource
     protected static ?string $model = Jurnal::class;
     protected static ?string $navigationIcon = 'heroicon-o-book-open';
     protected static ?string $navigationLabel = 'Jurnal Umum';
+    protected static ?string $pluralModelLabel = 'Jurnal Umum';
     protected static ?string $navigationGroup = 'Laporan';
 
     private static function getDetailOtomatis(string $jenis, string $referensi): array

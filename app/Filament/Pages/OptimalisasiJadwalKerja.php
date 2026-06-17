@@ -14,6 +14,7 @@ class OptimalisasiJadwalKerja extends Page
     protected static string $view = 'filament.pages.optimalisasi-jadwal-kerja';
     protected static ?string $navigationLabel = 'Optimalisasi Jadwal';
     protected static ?string $title = 'AI Optimalisasi Jadwal Kerja';
+    protected static ?string $navigationGroup = 'Analisis AI';
 
     public string $errorPesan    = '';
     public string $peakDay       = '';
