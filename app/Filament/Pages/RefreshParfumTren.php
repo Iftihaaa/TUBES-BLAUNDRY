@@ -12,6 +12,7 @@ class RefreshParfumTren extends Page
 {
     protected static ?string $navigationIcon = 'heroicon-o-sparkles';
     protected static ?string $navigationLabel = 'Tren Parfum AI';
+    protected static ?string $navigationGroup = 'Analisis AI';
     protected static ?string $title = 'Tren Parfum Laundry — AI Insight';
     protected static ?int $navigationSort = 5;
 
@@ -104,7 +105,7 @@ Berikan response dalam format JSON berikut, tanpa penjelasan apapun, tanpa markd
                                 ->body('Tren parfum laundry berhasil dianalisis oleh Gemini AI.')
                                 ->success()
                                 ->send();
-                                
+
                             $this->dispatch('$refresh'); 
                         }
                     } catch (\Exception $e) {
