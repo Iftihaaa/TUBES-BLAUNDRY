@@ -13,6 +13,7 @@ class OptimalisasiJadwalKerja extends Page
     protected static ?string $navigationIcon = 'heroicon-o-calendar-days';
     protected static string $view = 'filament.pages.optimalisasi-jadwal-kerja';
     protected static ?string $navigationLabel = 'Optimalisasi Jadwal';
+    protected static ?int $navigationSort = 6;
     protected static ?string $title = 'AI Optimalisasi Jadwal Kerja';
     protected static ?string $navigationGroup = 'Analisis AI';
 
