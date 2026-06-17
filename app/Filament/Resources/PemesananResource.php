@@ -36,6 +36,7 @@ class PemesananResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
     protected static ?string $navigationLabel = 'Pemesanan';
+    protected static ?string $pluralModelLabel = 'Pemesanan';
 
     protected static ?string $navigationGroup = 'Transaksi';
 

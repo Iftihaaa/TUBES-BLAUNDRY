@@ -18,6 +18,15 @@ class CompetitorAnalysisChartWidget extends ChartWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    /**
+     * Matikan polling bawaan Filament (default 5 detik).
+     * Refresh dilakukan via dispatch('$refresh') setelah analisis selesai.
+     * Polling aktif menyebabkan parent::updateChartData() men-dispatch event
+     * 'updateChartData' ke semua widget dan memicu MethodNotFoundException
+     * pada SummaryWidget/DetailWidget yang tidak memiliki method tersebut.
+     */
+    protected static ?string $pollingInterval = null;
+
     public static function canView(): bool
     {
         return filled(session(CompetitorAnalysis::SESSION_KEY));
@@ -25,7 +34,28 @@ class CompetitorAnalysisChartWidget extends ChartWidget
 
     public function rendering(): void
     {
+        // Reset cache agar getData() selalu baca ulang dari session.
         $this->cachedData = null;
+
+        // Panggil parent agar updateChartData() berjalan dan
+        // men-dispatch JS event ke chart.js Alpine component.
+        parent::rendering();
+    }
+
+    /**
+     * Override updateChartData() untuk men-scope dispatch hanya ke
+     * komponen ini sendiri (->self()), mencegah event menyebar ke
+     * SummaryWidget/DetailWidget yang tidak memiliki method ini.
+     */
+    public function updateChartData(): void
+    {
+        $newDataChecksum = $this->generateDataChecksum();
+
+        if ($newDataChecksum !== $this->dataChecksum) {
+            $this->dataChecksum = $newDataChecksum;
+
+            $this->dispatch('updateChartData', data: $this->getCachedData())->self();
+        }
     }
 
     protected function getType(): string

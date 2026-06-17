@@ -15,6 +15,11 @@ class CompetitorAnalysisSummaryWidget extends Widget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return filled(session(CompetitorAnalysis::SESSION_KEY));
+    }
+
 
     /**
      * @return array<string, mixed>
