@@ -36,9 +36,9 @@ class GeminiService
         if (empty($this->apiKey)) {
             throw new \RuntimeException(
                 'GEMINI_API_KEY belum dikonfigurasi di file .env.'
-            );  
+            );
         }
-        
+
         $prompt = $this->buildPrompt($data);
 
         $response = Http::timeout(90)->post(
@@ -64,35 +64,7 @@ class GeminiService
 
         $rawText = $response->json('candidates.0.content.parts.0.text', '');
 
-        $clean = trim($rawText);
-        $clean = preg_replace('/^```(json)?/i', '', $clean);
-        $clean = preg_replace('/```$/', '', $clean);
-        $clean = trim($clean);
-
-        $parsed = json_decode($clean, true);
-
-        if (! is_array($parsed)) {
-            $parsed = [
-                'status_keuangan' => 'Tidak diketahui',
-                'ringkasan' => $rawText ?: 'AI tidak memberikan jawaban yang dapat dibaca.',
-                'analisis_pendapatan' => '',
-                'analisis_beban' => '',
-                'analisis_margin' => '',
-                'rekomendasi' => [],
-                'kesimpulan' => '',
-            ];
-        }
-
-        return [
-            'status_keuangan' => $parsed['status_keuangan'] ?? 'Tidak diketahui',
-            'ringkasan' => $parsed['ringkasan'] ?? '',
-            'analisis_pendapatan' => $parsed['analisis_pendapatan'] ?? '',
-            'analisis_beban' => $parsed['analisis_beban'] ?? '',
-            'analisis_margin' => $parsed['analisis_margin'] ?? '',
-            'rekomendasi' => array_values((array) ($parsed['rekomendasi'] ?? [])),
-            'kesimpulan' => $parsed['kesimpulan'] ?? '',
-            'raw_response' => $rawText,
-        ];
+        return $this->parseAnalysisResponse($rawText);
     }
 
     /**
@@ -163,6 +135,70 @@ PROMPT;
         return $response->json('candidates.0.content.parts.0.text', 'Maaf, saya tidak punya jawaban untuk itu.');
     }
 
+    /**
+     * Analisa rasio keuangan dari neraca. Angka rasio dihitung di PHP;
+     * AI hanya menarasikan artinya dalam bahasa awam.
+     */
+    public function analisaRasio(array $data): array
+    {
+        if (empty($this->apiKey)) {
+            throw new \RuntimeException('GEMINI_API_KEY belum dikonfigurasi di file .env.');
+        }
+
+        $prompt = $this->buildPromptRasio($data);
+
+        $response = Http::timeout(90)->post(
+            "{$this->baseUrl}/{$this->model}:generateContent?key={$this->apiKey}",
+            [
+                'contents' => [
+                    ['parts' => [['text' => $prompt]]],
+                ],
+                'generationConfig' => [
+                    'temperature' => 0.4,
+                    'responseMimeType' => 'application/json',
+                ],
+            ]
+        );
+
+        if ($response->failed()) {
+            Log::error('Gemini analisaRasio error', ['body' => $response->body()]);
+            throw new \RuntimeException(
+                'Gemini error (' . $response->status() . '): '
+                . $response->json('error.message', $response->body())
+            );
+        }
+
+        $rawText = $response->json('candidates.0.content.parts.0.text', '');
+
+        $clean = trim($rawText);
+        $clean = preg_replace('/^```(json)?/i', '', $clean);
+        $clean = preg_replace('/```$/', '', $clean);
+        $parsed = json_decode(trim($clean), true);
+
+        if (! is_array($parsed)) {
+            $parsed = [
+                'status_keuangan' => 'Tidak diketahui',
+                'ringkasan' => $rawText ?: 'AI tidak memberikan jawaban yang dapat dibaca.',
+                'analisis_solvabilitas' => '',
+                'analisis_profitabilitas' => '',
+                'analisis_struktur_modal' => '',
+                'rekomendasi' => [],
+                'kesimpulan' => '',
+            ];
+        }
+
+        return [
+            'status_keuangan' => $parsed['status_keuangan'] ?? 'Tidak diketahui',
+            'ringkasan' => $parsed['ringkasan'] ?? '',
+            'analisis_solvabilitas' => $parsed['analisis_solvabilitas'] ?? '',
+            'analisis_profitabilitas' => $parsed['analisis_profitabilitas'] ?? '',
+            'analisis_struktur_modal' => $parsed['analisis_struktur_modal'] ?? '',
+            'rekomendasi' => array_values((array) ($parsed['rekomendasi'] ?? [])),
+            'kesimpulan' => $parsed['kesimpulan'] ?? '',
+            'raw_response' => $rawText,
+        ];
+    }
+
     protected function parseAnalysisResponse(string $rawText): array
     {
         $clean = trim($rawText);
@@ -196,7 +232,7 @@ PROMPT;
         ];
     }
 
-        protected function buildPrompt(array $data): string
+    protected function buildPrompt(array $data): string
     {
         $namaBulan = $data['nama_bulan'] ?? $data['bulan'];
         $tahun = $data['tahun'];
@@ -243,6 +279,56 @@ Balas HANYA dalam format JSON valid (tanpa teks lain) dengan struktur persis sep
   "analisis_margin": "penjelasan margin laba dalam bahasa awam, sebutkan persentasenya",
   "rekomendasi": ["saran konkret 1", "saran konkret 2", "saran terkait target pesanan bulan depan"],
   "kesimpulan": "1-2 kalimat kesimpulan memotivasi yang menyinggung target bulan depan"
+}
+PROMPT;
+    }
+
+    /**
+     * Menyusun prompt analisa rasio keuangan (dari neraca).
+     */
+    protected function buildPromptRasio(array $data): string
+    {
+        $namaBulan = $data['nama_bulan'] ?? '';
+        $tahun = $data['tahun'] ?? '';
+        $aset = number_format($data['total_aset'] ?? 0, 0, ',', '.');
+        $kewajiban = number_format($data['total_kewajiban'] ?? 0, 0, ',', '.');
+        $ekuitas = number_format($data['total_ekuitas'] ?? 0, 0, ',', '.');
+        $laba = number_format($data['laba_berjalan'] ?? 0, 0, ',', '.');
+
+        $r = $data['rasio'] ?? [];
+        $debtAsset = $r['debt_to_asset'] ?? 0;
+        $der = $r['der'] ?? 0;
+        $equityRatio = $r['equity_ratio'] ?? 0;
+        $roa = $r['roa'] ?? 0;
+        $roe = $r['roe'] ?? 0;
+
+        return <<<PROMPT
+Kamu konsultan keuangan ramah untuk pemilik usaha laundry (BLaundry) yang TIDAK mengerti istilah akuntansi.
+Tugasmu menjelaskan rasio-rasio keuangan dari neraca menjadi bahasa awam yang mudah dipahami, dalam Bahasa Indonesia yang santai, jelas, dan memotivasi.
+
+Posisi keuangan per akhir {$namaBulan} {$tahun}:
+- Total Aset: Rp {$aset}
+- Total Kewajiban (utang): Rp {$kewajiban}
+- Total Ekuitas (modal sendiri): Rp {$ekuitas}
+- Laba periode berjalan: Rp {$laba}
+
+Rasio keuangan yang sudah dihitung:
+- Rasio Utang terhadap Aset: {$debtAsset}% (berapa persen aset yang dibiayai utang)
+- Rasio Utang terhadap Modal (DER): {$der}% (perbandingan utang dengan modal sendiri)
+- Rasio Modal terhadap Aset: {$equityRatio}% (berapa persen aset yang dimiliki sendiri)
+- Return on Assets (ROA): {$roa}% (kemampuan aset menghasilkan laba)
+- Return on Equity (ROE): {$roe}% (kemampuan modal menghasilkan laba)
+
+Jelaskan arti angka-angka ini untuk kesehatan usaha laundry. Jangan pakai istilah rumit; kalau terpaksa, beri analogi sederhana.
+Balas HANYA dalam format JSON valid (tanpa teks lain) dengan struktur persis seperti ini:
+{
+  "status_keuangan": "salah satu dari: Sehat, Perlu Perhatian, atau Kritis",
+  "ringkasan": "2-3 kalimat bahasa awam soal kondisi keuangan usaha secara keseluruhan",
+  "analisis_solvabilitas": "penjelasan soal utang: apakah usaha terlalu banyak utang atau aman, berdasarkan rasio utang",
+  "analisis_profitabilitas": "penjelasan soal ROA & ROE: apakah aset & modal sudah bekerja menghasilkan laba dengan baik",
+  "analisis_struktur_modal": "penjelasan soal komposisi modal sendiri vs utang dalam membiayai usaha",
+  "rekomendasi": ["saran konkret 1", "saran konkret 2", "saran konkret 3"],
+  "kesimpulan": "1-2 kalimat kesimpulan memotivasi"
 }
 PROMPT;
     }

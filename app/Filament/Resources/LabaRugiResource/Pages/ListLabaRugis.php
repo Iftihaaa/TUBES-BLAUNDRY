@@ -153,7 +153,7 @@ class ListLabaRugis extends Page
     }
 
     /**
-     * Tren laba bersih 6 bulan terakhir + persen naik/turun.
+     * Tren laba bersih beberapa bulan terakhir + persen naik/turun.
      */
     private function loadTren(): void
     {
@@ -161,9 +161,18 @@ class ListLabaRugis extends Page
         $awal = Carbon::create($this->tahun, $this->bulan, 1);
         $labaSebelumnya = null;
 
-        for ($i = 2; $i >= 0; $i--) {
+        // Lihat sampai 6 bulan terakhir, TAPI hanya tampilkan bulan yang ADA
+        // transaksinya (ada pendapatan atau beban). Bulan kosong / yang hanya
+        // berisi setoran modal akan dilewati supaya tren tidak penuh "Rp 0".
+        for ($i = 5; $i >= 0; $i--) {
             $d = $awal->copy()->subMonths($i);
-            $laba = $this->angkaLaba($d->month, $d->year)['laba'];
+            $a = $this->angkaLaba($d->month, $d->year);
+
+            if ($a['pendapatan'] <= 0 && $a['beban'] <= 0) {
+                continue;
+            }
+
+            $laba = $a['laba'];
 
             $perubahan = null;
             if ($labaSebelumnya !== null && $labaSebelumnya != 0) {
@@ -286,7 +295,7 @@ class ListLabaRugis extends Page
     private function ringkasanKonteksAi(): string
     {
         $baris = [];
-        $baris[] = 'Tren laba bersih 6 bulan terakhir:';
+        $baris[] = 'Tren laba bersih beberapa bulan terakhir:';
         foreach ($this->trenLaba as $t) {
             $p = is_null($t['perubahan'])
                 ? ''
